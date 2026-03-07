@@ -12,15 +12,9 @@ export default function CitySelector({ cities, currentCityId, onCityChange }: Ci
   return (
     <div className="w-full rounded-[999px] bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-[0_18px_50px_rgba(15,23,42,0.8)] px-3 py-2.5 flex items-center gap-3">
       <div className="flex items-center gap-2 min-w-0">
-        <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800">
-          <span className="text-[11px] font-semibold text-slate-100">ON</span>
-        </div>
         <div className="flex flex-col leading-tight">
           <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-slate-100">
             Choose location
-          </span>
-          <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-slate-100">
-            for care
           </span>
         </div>
       </div>
