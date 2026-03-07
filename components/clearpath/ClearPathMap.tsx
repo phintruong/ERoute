@@ -9,6 +9,7 @@ import FlowArcs from './FlowArcs';
 import HospitalFootprintsLayer from './HospitalFootprintsLayer';
 import LandmarksLayer from './LandmarksLayer';
 import type { CityConfig } from '@/lib/map-3d/types';
+import type { TimelinePrediction } from '@/lib/clearpath/trafficPrediction';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 
@@ -20,6 +21,8 @@ interface ClearPathMapProps {
   recommendedHospital: any;
   onMapClick?: (lngLat: { lng: number; lat: number }) => void;
   proposedLocation?: { lat: number; lng: number } | null;
+  trafficPrediction?: TimelinePrediction | null;
+  trafficDragging?: boolean;
 }
 
 const CONGESTION_COLORS: Record<string, string> = {
@@ -75,6 +78,8 @@ export default function ClearPathMap({
   recommendedHospital,
   onMapClick,
   proposedLocation,
+  trafficPrediction,
+  trafficDragging,
 }: ClearPathMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -127,8 +132,8 @@ export default function ClearPathMap({
     async function fetchData() {
       try {
         const [hospRes, congRes] = await Promise.all([
-          fetch(`/api/clearpath/hospitals?city=${cityId}`),
-          fetch(`/api/clearpath/congestion?city=${cityId}`),
+          fetch('/api/clearpath/hospitals'),
+          fetch('/api/clearpath/congestion'),
         ]);
         const hospData = await hospRes.json();
         const congData = await congRes.json();
@@ -139,7 +144,7 @@ export default function ClearPathMap({
       }
     }
     fetchData();
-  }, [cityId]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -350,13 +355,80 @@ export default function ClearPathMap({
     }
   }, [recommendedHospital]);
 
+  // Update route progress + traffic colors when the timeline slider moves
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !trafficPrediction) return;
+
+    const predSegs = trafficPrediction.segments;
+    const rec = recommendedHospital?.recommended ?? recommendedHospital;
+    const routeGeometry = rec?.routeGeometry;
+    const baseCongestion = rec?.congestionSegments as string[] | undefined;
+
+    if (!routeGeometry?.coordinates) return;
+
+    const allCoords: [number, number][] = routeGeometry.coordinates;
+    const totalPts = allCoords.length;
+
+    // When the slider is being dragged, progressively reveal the route
+    // based on the future time. When it's inactive, always show the full route.
+    let fraction = 1;
+    if (trafficDragging) {
+      const maxMinutes = 60;
+      fraction = Math.min(1, Math.max(0.05, trafficPrediction.minutesFromNow / maxMinutes));
+    }
+    const visibleCount = Math.max(2, Math.round(totalPts * fraction));
+    const trimmedCoords = allCoords.slice(0, visibleCount);
+    const trimmedGeometry = { type: 'LineString' as const, coordinates: trimmedCoords };
+
+    // Update the background line
+    const bgSrc = map.getSource('driving-route') as mapboxgl.GeoJSONSource | undefined;
+    if (bgSrc) {
+      bgSrc.setData({ type: 'Feature', geometry: trimmedGeometry, properties: {} });
+    }
+
+    // Update the animated dash overlay
+    const animSrc = map.getSource('driving-route-anim') as mapboxgl.GeoJSONSource | undefined;
+    if (animSrc) {
+      animSrc.setData({ type: 'Feature', geometry: trimmedGeometry, properties: {} });
+    }
+
+    // Rebuild traffic segments for the trimmed route
+    const trimmedBase = baseCongestion?.slice(0, visibleCount - 1);
+    const mergedSegs = buildTrafficSegments(trimmedCoords, trimmedBase);
+
+    // Update existing traffic segment layers: show visible ones, hide the rest
+    for (let i = 0; i < 200; i++) {
+      const layerId = `traffic-seg-line-${i}`;
+      const srcId = `traffic-seg-${i}`;
+      if (!map.getLayer(layerId)) break;
+
+      if (i < mergedSegs.length) {
+        // Update geometry
+        const src = map.getSource(srcId) as mapboxgl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData({ type: 'Feature', geometry: mergedSegs[i].geometry, properties: {} });
+        }
+
+        // Apply predicted color
+        const predSeg = predSegs[Math.min(i, predSegs.length - 1)];
+        const color = CONGESTION_COLORS[predSeg?.congestion ?? 'unknown'] ?? CONGESTION_COLORS.unknown;
+        map.setPaintProperty(layerId, 'line-color', color);
+        map.setPaintProperty(layerId, 'line-opacity', 0.9);
+      } else {
+        // Hide segments beyond the trimmed route
+        map.setPaintProperty(layerId, 'line-opacity', 0);
+      }
+    }
+  }, [trafficPrediction, trafficDragging, recommendedHospital]);
+
   return (
     <div className="absolute inset-0">
       <div ref={mapContainer} className="w-full h-full" />
       {mapReady && (
         <>
-          <HospitalFootprintsLayer map={mapRef.current} cityId={cityId} />
-          <LandmarksLayer map={mapRef.current} cityId={cityId} />
+          <HospitalFootprintsLayer map={mapRef.current} />
+          <LandmarksLayer map={mapRef.current} />
           <CongestionLayer map={mapRef.current} hospitals={hospitals} congestion={congestion} />
           <FlowArcs
             map={mapRef.current}

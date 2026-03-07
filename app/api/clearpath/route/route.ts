@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const hospitals = await db
       .collection('hospitals')
-      .find({ city: body.city.toLowerCase() })
+      .find({})
       .toArray();
     const snapshots = await db
       .collection('congestion_snapshots')

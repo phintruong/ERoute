@@ -21,8 +21,8 @@ const CITIES: Record<
     name: 'Toronto',
     bbox: [43.58, -79.64, 43.85, -79.12],
   },
-  kitchener: {
-    name: 'Kitchener',
+  waterloo: {
+    name: 'Waterloo',
     bbox: [43.4, -80.6, 43.5, -80.4],
   },
   mississauga: {

@@ -7,12 +7,13 @@ import { getFirstSymbolLayerId } from '@/lib/mapbox/createMap';
 const SOURCE_ID = 'hospital-footprints';
 const LAYER_ID = 'hospital-footprints-extrusion';
 
+const CITY_IDS = ['toronto', 'waterloo', 'mississauga'];
+
 interface HospitalFootprintsLayerProps {
   map: mapboxgl.Map | null;
-  cityId: string;
 }
 
-export default function HospitalFootprintsLayer({ map, cityId }: HospitalFootprintsLayerProps) {
+export default function HospitalFootprintsLayer({ map }: HospitalFootprintsLayerProps) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -22,23 +23,34 @@ export default function HospitalFootprintsLayer({ map, cityId }: HospitalFootpri
     if (!beforeLayerId) return;
 
     async function addLayer() {
+      if (!map) return;
       try {
-        const res = await fetch(`/map-data/hospital-footprints-${cityId}.geojson`);
-        if (!res.ok) {
-          setLoaded(true);
-          return;
+        const allFeatures: GeoJSON.Feature[] = [];
+        for (const cid of CITY_IDS) {
+          try {
+            const res = await fetch(`/map-data/hospital-footprints-${cid}.geojson`);
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (data.features) allFeatures.push(...data.features);
+          } catch {
+            // File may not exist for this city
+          }
         }
-        const data = await res.json();
+
+        const merged: GeoJSON.FeatureCollection = {
+          type: 'FeatureCollection',
+          features: allFeatures,
+        };
 
         if (map.getSource(SOURCE_ID)) {
-          (map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource).setData(data);
+          (map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource).setData(merged);
           setLoaded(true);
           return;
         }
 
         map.addSource(SOURCE_ID, {
           type: 'geojson',
-          data,
+          data: merged,
         });
 
         map.addLayer(
@@ -56,7 +68,7 @@ export default function HospitalFootprintsLayer({ map, cityId }: HospitalFootpri
           beforeLayerId
         );
       } catch {
-        // File may not exist yet (script not run)
+        // Files may not exist yet
       }
       setLoaded(true);
     }
@@ -67,7 +79,7 @@ export default function HospitalFootprintsLayer({ map, cityId }: HospitalFootpri
       if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
     };
-  }, [map, cityId]);
+  }, [map]);
 
   return null;
 }
