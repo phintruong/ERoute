@@ -60,9 +60,6 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
         video: { facingMode: 'user' },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
       setCaptureState('capturing');
 
       let elapsed = 0;
@@ -97,6 +94,18 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
       switchToManualFallback('Camera unavailable. Please enter vitals manually.');
     }
   }, [onComplete, switchToManualFallback]);
+
+  // Attach stream to video once the element is mounted (it only exists when captureState === 'capturing')
+  useEffect(() => {
+    if (captureState !== 'capturing' || !streamRef.current || !videoRef.current) return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    video.srcObject = stream;
+    video.play().catch(() => {});
+    return () => {
+      video.srcObject = null;
+    };
+  }, [captureState]);
 
   useEffect(() => {
     return () => {

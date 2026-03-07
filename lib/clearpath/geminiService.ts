@@ -87,8 +87,9 @@ export async function classifyTriage(
     throw new GeminiTriageError('GEMINI_API_KEY is not set', 'API_ERROR');
   }
 
+  const modelId = process.env.GEMINI_MODEL ?? 'gemini-3-flash-preview';
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: modelId,
     generationConfig: {
       temperature: 0.3,
     },
