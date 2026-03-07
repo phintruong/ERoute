@@ -63,8 +63,14 @@ export default function FlowArcs({ map, hospitals, proposedLocation, simulationR
     });
 
     return () => {
-      if (map.getLayer(layerId)) map.removeLayer(layerId);
-      if (map.getSource(sourceId)) map.removeSource(sourceId);
+      try {
+        if (map.getStyle()) {
+          if (map.getLayer(layerId)) map.removeLayer(layerId);
+          if (map.getSource(sourceId)) map.removeSource(sourceId);
+        }
+      } catch {
+        // Map already destroyed during navigation — nothing to clean up
+      }
     };
   }, [map, hospitals, proposedLocation, simulationResult]);
 
