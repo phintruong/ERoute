@@ -26,7 +26,7 @@ export default function MapPage() {
   }, []);
 
   return (
-    <div className='relative w-full h-screen'>
+    <div className='fixed inset-0 overflow-hidden'>
       <ClearPathMap
         mode={mode}
         cityId={selectedCity.id}
@@ -36,7 +36,7 @@ export default function MapPage() {
         onMapClick={handleMapClick}
         proposedLocation={proposedLocation}
       />
-      <div className='absolute top-0 left-0 w-96 z-10 flex flex-col gap-3 p-4'>
+      <div className='absolute top-0 left-0 w-96 z-10 flex flex-col gap-3 p-4 max-h-screen overflow-y-auto'>
         <ModeToggle mode={mode} onChange={setMode} />
         <CitySelector
           cities={CITIES}
@@ -48,9 +48,9 @@ export default function MapPage() {
             <GovernmentSidebar onSimulationResult={setSimulationResult} />
           ) : (
             <CivilianPanel onRecommendation={setRecommendedHospital} />
-                  )}
-                </div>
-                  </div>
-                </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
