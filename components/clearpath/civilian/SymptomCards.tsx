@@ -11,7 +11,7 @@ export default function SymptomCards({ onComplete }: SymptomCardsProps) {
   const [chestPain, setChestPain] = useState(false);
   const [shortnessOfBreath, setShortnessOfBreath] = useState(false);
   const [fever, setFever] = useState(false);
-  const [feverDays, setFeverDays] = useState<number>(1);
+  const [feverDays, setFeverDays] = useState<number | ''>(1);
   const [dizziness, setDizziness] = useState(false);
   const [freeText, setFreeText] = useState('');
 
@@ -20,7 +20,7 @@ export default function SymptomCards({ onComplete }: SymptomCardsProps) {
       chestPain,
       shortnessOfBreath,
       fever,
-      feverDays: fever ? feverDays : undefined,
+      feverDays: fever && typeof feverDays === 'number' ? feverDays : undefined,
       dizziness,
       freeText: freeText.trim() || undefined,
     });
@@ -73,7 +73,17 @@ export default function SymptomCards({ onComplete }: SymptomCardsProps) {
             min={1}
             max={30}
             value={feverDays}
-            onChange={(e) => setFeverDays(parseInt(e.target.value) || 1)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '') {
+                setFeverDays('');
+                return;
+              }
+              const n = parseInt(v, 10);
+              if (!Number.isNaN(n)) {
+                setFeverDays(n);
+              }
+            }}
             className="w-full px-3 py-1.5 border border-amber-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>

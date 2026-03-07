@@ -48,9 +48,9 @@ export default function MapPage() {
             <GovernmentSidebar onSimulationResult={setSimulationResult} />
           ) : (
             <CivilianPanel onRecommendation={setRecommendedHospital} />
-          )}
-        </div>
-      </div>
-    </div>
+                  )}
+                </div>
+                  </div>
+                </div>
   );
 }

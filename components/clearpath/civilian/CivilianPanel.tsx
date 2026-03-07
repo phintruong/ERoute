@@ -26,11 +26,50 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
   const handleUseMyLocation = useCallback(() => {
     setLocating(true);
     setError(null);
+
+    if (!navigator.geolocation) {
+      setError('Location is not supported on this device. Please enter a postal code.');
+      setLocating(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setPostalCode('');
-        setLocating(false);
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserCoords(coords);
+
+        // Reverse geocode to show postal code in the input
+        (async () => {
+          try {
+            const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+            if (!token) {
+              return;
+            }
+
+            const url =
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+              `${coords.lng},${coords.lat}.json` +
+              `?country=ca&types=postcode&limit=1&access_token=${token}`;
+
+            const res = await fetch(url);
+            if (!res.ok) return;
+
+            const data: any = await res.json();
+            const feature = data.features?.[0];
+            const code =
+              feature?.text ||
+              feature?.properties?.postalcode ||
+              (typeof feature?.place_name === 'string' ? feature.place_name.split(',')[0] : undefined);
+
+            if (code) {
+              setPostalCode(code as string);
+            }
+          } catch (err) {
+            console.error('Reverse geocoding failed', err);
+          } finally {
+            setLocating(false);
+          }
+        })();
       },
       () => {
         setError('Could not get your location. Please enter a postal code.');
