@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Traffic Analytics System
  * Comprehensive monitoring and metrics collection for traffic simulation

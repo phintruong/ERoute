@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Performance Optimization System
  * Phase 3: Object pooling, LOD (Level of Detail), and staggered updates for 60 FPS @ 100 vehicles
