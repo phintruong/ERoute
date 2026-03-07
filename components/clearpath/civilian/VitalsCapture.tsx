@@ -203,48 +203,56 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
 
   if (captureState === 'capturing') {
     return (
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-          Vitals Capture
-        </h3>
-        <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute bottom-0 left-0 right-0 h-2 bg-slate-700">
-            <div
-              className="h-full bg-green-500 transition-all duration-1000"
-              style={{ width: `${progress}%` }}
+      <div className="fixed inset-0 z-9999 bg-black/90 backdrop-blur-sm flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6 w-full max-w-xl px-6">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Scanning Vitals
+          </h3>
+          <p className="text-xs text-white/60 -mt-4">
+            Look directly at the camera and hold still
+          </p>
+          <div className="relative rounded-2xl overflow-hidden bg-black w-full aspect-4/3 shadow-2xl ring-2 ring-white/10">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover scale-x-[-1]"
             />
+            <div className="absolute inset-0 border-[3px] border-white/20 rounded-2xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10">
+              <div
+                className="h-full bg-green-400 transition-all duration-1000"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
+          <p className="text-sm text-white/70 font-medium">
+            Capturing... {Math.round(progress)}%
+          </p>
+          <div className="grid grid-cols-3 gap-4 text-center w-full">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <span className="font-bold text-white/50 text-[10px] uppercase block mb-1">Heart Rate</span>
+              <span className="font-black text-white text-lg">{liveHeartRate ?? '--'}</span>
+              <span className="text-white/40 text-[10px] ml-1">bpm</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <span className="font-bold text-white/50 text-[10px] uppercase block mb-1">Resp Rate</span>
+              <span className="font-black text-white text-lg">{liveRespiratoryRate ?? '--'}</span>
+              <span className="text-white/40 text-[10px] ml-1">/min</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <span className="font-bold text-white/50 text-[10px] uppercase block mb-1">Stress</span>
+              <span className="font-black text-white text-lg">{liveStressIndex ?? '--'}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => switchToManualFallback('Switched to manual entry.')}
+            className="text-xs text-white/40 hover:text-white/70 underline transition-colors"
+          >
+            Enter vitals manually instead
+          </button>
         </div>
-        <p className="text-[11px] text-center text-slate-500">
-          Hold still — capturing vitals... {Math.round(progress)}%
-        </p>
-        <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-          <div className="bg-slate-100 rounded-lg p-2">
-            <span className="font-bold text-slate-600 block">HR</span>
-            <span className="font-black text-slate-800">{liveHeartRate ?? '--'} bpm</span>
-          </div>
-          <div className="bg-slate-100 rounded-lg p-2">
-            <span className="font-bold text-slate-600 block">RR</span>
-            <span className="font-black text-slate-800">{liveRespiratoryRate ?? '--'}/min</span>
-          </div>
-          <div className="bg-slate-100 rounded-lg p-2">
-            <span className="font-bold text-slate-600 block">Stress</span>
-            <span className="font-black text-slate-800">{liveStressIndex ?? '--'}</span>
-          </div>
-        </div>
-        <button
-          onClick={() => switchToManualFallback('Switched to manual entry.')}
-          className="w-full text-[11px] text-slate-400 hover:text-slate-600 underline"
-        >
-          Enter vitals manually instead
-        </button>
       </div>
     );
   }
