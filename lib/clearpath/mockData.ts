@@ -671,6 +671,76 @@ export const mockHospitals: Hospital[] = [
     "specialties": [
       "general", "rehabilitation"
     ]
+  },
+  {
+    "id": "odhf-41",
+    "name": "Guelph General Hospital",
+    "city": "guelph",
+    "latitude": 43.5563618,
+    "longitude": -80.2535473,
+    "totalBeds": 328,
+    "erBeds": 45,
+    "phone": "519-822-5350",
+    "website": "https://www.gghorg.ca",
+    "specialties": [
+      "general", "cardiac", "obstetrics", "mental-health"
+    ]
+  },
+  {
+    "id": "odhf-42",
+    "name": "Homewood Health Centre",
+    "city": "guelph",
+    "latitude": 43.557379100000006,
+    "longitude": -80.25674980000001,
+    "totalBeds": 312,
+    "erBeds": 0,
+    "phone": "519-824-1010",
+    "website": "https://www.homewood.org",
+    "specialties": [
+      "mental-health", "addiction", "trauma"
+    ]
+  },
+  {
+    "id": "odhf-43",
+    "name": "William Osler Health System - Brampton Civic Hospital",
+    "city": "brampton",
+    "latitude": 43.747465999999996,
+    "longitude": -79.743223,
+    "totalBeds": 608,
+    "erBeds": 65,
+    "phone": "905-494-2120",
+    "website": "https://www.williamoslerhs.ca",
+    "specialties": [
+      "general", "cardiac", "obstetrics", "mental-health", "oncology"
+    ]
+  },
+  {
+    "id": "odhf-44",
+    "name": "William Osler Health System - Peel Memorial",
+    "city": "brampton",
+    "latitude": 43.690476000000004,
+    "longitude": -79.75143100000001,
+    "totalBeds": 175,
+    "erBeds": 30,
+    "phone": "905-494-2120",
+    "website": "https://www.williamoslerhs.ca",
+    "specialties": [
+      "general", "rehabilitation", "respiratory"
+    ]
+  },
+  {
+    "id": "odhf-45",
+    "name": "Cosmetic Surgery Hospital (Cortellucci Vaughan Hospital)",
+    "city": "vaughan",
+    "latitude": 43.7833018,
+    "longitude": -79.57800300000001,
+    "totalBeds": 350,
+    "erBeds": 45,
+    "phone": "416-494-2120",
+    "website": "https://www.mackenziehealth.ca",
+    "specialties": [
+      "general", "cardiac", "obstetrics"
+    ]
   }
 ];
 
