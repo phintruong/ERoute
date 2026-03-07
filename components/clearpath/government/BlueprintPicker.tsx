@@ -16,23 +16,21 @@ export default function BlueprintPicker({ selected, onSelect }: BlueprintPickerP
           <button
             key={bp.id}
             onClick={() => onSelect(bp)}
-            className={`w-full text-left p-3 rounded-lg border transition-all ${
-              isActive
-                ? 'border-slate-700 bg-slate-800 text-white shadow-md'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-700'
-            }`}
+            className={`w-full text-left p-3 rounded-xl border transition-all ${isActive
+                ? 'border-sky-400 bg-sky-500 text-white shadow-md'
+                : 'border-sky-200/70 bg-white hover:border-sky-300 hover:bg-sky-50/50 text-slate-700'
+              }`}
           >
             <div className="flex items-center justify-between">
               <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700'}`}>
                 {bp.name}
               </span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                isActive ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'
-              }`}>
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isActive ? 'bg-sky-600 text-sky-100' : 'bg-sky-50 text-sky-600'
+                }`}>
                 {bp.beds} beds
               </span>
             </div>
-            <p className={`text-[10px] mt-0.5 ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
+            <p className={`text-[10px] mt-0.5 ${isActive ? 'text-sky-100' : 'text-slate-400'}`}>
               {bp.description}
             </p>
           </button>
