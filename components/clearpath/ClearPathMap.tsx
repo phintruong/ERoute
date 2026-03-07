@@ -8,8 +8,12 @@ import CongestionLayer from './CongestionLayer';
 import FlowArcs from './FlowArcs';
 import HospitalFootprintsLayer from './HospitalFootprintsLayer';
 import LandmarksLayer from './LandmarksLayer';
+import TrafficLayer from './government/TrafficLayer';
+import GLBModelLayer from './government/GLBModelLayer';
+import SuitableParcelsLayer from './government/SuitableParcelsLayer';
 import type { CityConfig } from '@/lib/map-3d/types';
 import type { TimelinePrediction } from '@/lib/clearpath/trafficPrediction';
+import type { Blueprint } from '@/lib/clearpath/blueprints';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 
@@ -23,6 +27,7 @@ interface ClearPathMapProps {
   proposedLocation?: { lat: number; lng: number } | null;
   trafficPrediction?: TimelinePrediction | null;
   trafficDragging?: boolean;
+  selectedBlueprint?: Blueprint | null;
 }
 
 const CONGESTION_COLORS: Record<string, string> = {
@@ -80,6 +85,7 @@ export default function ClearPathMap({
   proposedLocation,
   trafficPrediction,
   trafficDragging,
+  selectedBlueprint,
 }: ClearPathMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -91,6 +97,8 @@ export default function ClearPathMap({
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const prevCityIdRef = useRef(cityId);
   const trafficAnimRef = useRef<number>(0);
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -116,7 +124,7 @@ export default function ClearPathMap({
     });
 
     map.on('click', (e) => {
-      onMapClick?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+      onMapClickRef.current?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
     });
 
     mapRef.current = map;
@@ -161,7 +169,7 @@ export default function ClearPathMap({
   }, [cityId, cityConfig, mapReady]);
 
   useEffect(() => {
-    if (!mapRef.current || !proposedLocation) {
+    if (!mapRef.current || mode !== 'government' || !proposedLocation) {
       proposedMarkerRef.current?.remove();
       proposedMarkerRef.current = null;
       return;
@@ -184,10 +192,10 @@ export default function ClearPathMap({
 
       proposedMarkerRef.current.on('dragend', () => {
         const lngLat = proposedMarkerRef.current!.getLngLat();
-        onMapClick?.({ lng: lngLat.lng, lat: lngLat.lat });
+        onMapClickRef.current?.({ lng: lngLat.lng, lat: lngLat.lat });
       });
     }
-  }, [proposedLocation, onMapClick]);
+  }, [mode, proposedLocation]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -438,12 +446,31 @@ export default function ClearPathMap({
           <HospitalFootprintsLayer map={mapRef.current} />
           <LandmarksLayer map={mapRef.current} />
           <CongestionLayer map={mapRef.current} hospitals={hospitals} congestion={congestion} />
-          <FlowArcs
-            map={mapRef.current}
-            hospitals={hospitals}
-            proposedLocation={proposedLocation ?? null}
-            simulationResult={simulationResult}
-          />
+          {mode === 'government' && (
+            <>
+              <TrafficLayer map={mapRef.current} />
+              {selectedBlueprint && (
+                <SuitableParcelsLayer
+                  map={mapRef.current}
+                  cityId={cityId}
+                  blueprint={selectedBlueprint}
+                />
+              )}
+              <FlowArcs
+                map={mapRef.current}
+                hospitals={hospitals}
+                proposedLocation={proposedLocation ?? null}
+                simulationResult={simulationResult}
+              />
+              {selectedBlueprint && proposedLocation && (
+                <GLBModelLayer
+                  map={mapRef.current}
+                  glbPath={selectedBlueprint.glbPath}
+                  lngLat={proposedLocation}
+                />
+              )}
+            </>
+          )}
         </>
       )}
       <style jsx global>{`
