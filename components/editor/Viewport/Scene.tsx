@@ -1,11 +1,14 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { BuildingWrapper } from './BuildingWrapper';
 import { useBuildings } from '@/lib/editor/contexts/BuildingsContext';
 import { DEFAULT_BUILDING_SPEC } from '@/lib/editor/types/buildingSpec';
 import { useBuildingSound } from '@/lib/editor/hooks/useBuildingSound';
+import { FloorPlanView } from '@/components/editor/FloorPlan/FloorPlanView';
+import { ROOM_TYPES } from '@/lib/editor/floorplan/roomTypes';
+import { generateFloorPlan } from '@/lib/editor/floorplan/layoutAlgorithm';
 
 const SNAP_THRESHOLD = 5; // Units within which snapping activates
 
@@ -14,7 +17,7 @@ interface SceneContentProps {
 }
 
 function SceneContent({ sceneRef }: SceneContentProps) {
-  const { buildings, selectedBuildingId, selectBuilding, addBuilding, placementMode, clearSelection } = useBuildings();
+  const { buildings, selectedBuildingId, selectBuilding, addBuilding, placementMode, clearSelection, floorPlanRoomType, getSelectedBuilding } = useBuildings();
   const { scene } = useThree();
   const { play: playSound } = useBuildingSound();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
@@ -165,77 +168,113 @@ function SceneContent({ sceneRef }: SceneContentProps) {
     setIsSnapped(false);
   };
 
+  // Compute floor plan layout dimensions for camera positioning
+  const selectedBuilding = getSelectedBuilding();
+  const floorPlanLayout = useMemo(() => {
+    if (!floorPlanRoomType || !selectedBuilding) return null;
+    const roomDef = ROOM_TYPES.find((r) => r.id === floorPlanRoomType);
+    if (!roomDef) return null;
+    const count = roomDef.getCount(selectedBuilding.spec);
+    if (count <= 0) return null;
+    return generateFloorPlan(roomDef, count);
+  }, [floorPlanRoomType, selectedBuilding]);
+
+  const isFloorPlanMode = !!floorPlanRoomType && !!floorPlanLayout;
+
+  // Calculate zoom to fit the layout
+  const floorPlanZoom = useMemo(() => {
+    if (!floorPlanLayout) return 10;
+    const maxDim = Math.max(floorPlanLayout.totalWidth, floorPlanLayout.totalDepth);
+    return Math.max(2, 80 / maxDim);
+  }, [floorPlanLayout]);
+
   return (
     <>
-      {/* Even lighting from all directions for consistent illumination */}
+      {/* Lighting - always present */}
       <ambientLight intensity={0.8} />
       <hemisphereLight args={[0xffffff, 0xffffff, 0.5]} />
-
-      {/* Subtle fill lights from multiple angles for even coverage */}
       <pointLight position={[50, 50, 50]} intensity={0.3} />
       <pointLight position={[-50, 50, 50]} intensity={0.3} />
       <pointLight position={[50, 50, -50]} intensity={0.3} />
       <pointLight position={[-50, 50, -50]} intensity={0.3} />
 
-      {/* Invisible grid plane for click detection and pointer tracking - excluded from export */}
-      <mesh
-        ref={gridPlaneRef}
-        name="click-detection-plane"
-        userData={{ excludeFromExport: true }}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, 0]}
-        onClick={handleGridClick}
-        onPointerMove={handlePointerMove}
-        visible={false}
-      >
-        <planeGeometry args={[1000, 1000]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
+      {isFloorPlanMode ? (
+        <>
+          {/* Floor plan rendering */}
+          <FloorPlanView roomType={floorPlanRoomType!} spec={selectedBuilding!.spec} />
 
-      {/* Grid - marked to exclude from export */}
-      <group name="grid-helper" userData={{ excludeFromExport: true }}>
-        <Grid
-          position={[0, -0.01, 0]}
-          args={[100, 100]}
-          cellSize={1}
-          cellThickness={0.5}
-          cellColor="#a0a0a0"
-          sectionSize={5}
-          sectionThickness={1}
-          sectionColor="#707070"
-          fadeDistance={100}
-          fadeStrength={1}
-          infiniteGrid
-        />
-      </group>
-
-      {/* Ghost building preview when in placement mode */}
-      {placementMode && ghostPosition && (
-        <group position={[ghostPosition.x, ghostPosition.y + (DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors) / 2, ghostPosition.z]}>
-          <mesh>
-            <boxGeometry args={[DEFAULT_BUILDING_SPEC.width, DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors, DEFAULT_BUILDING_SPEC.depth]} />
-            <meshStandardMaterial color={isSnapped ? "#22c55e" : "#3b82f6"} transparent opacity={0.4} />
+          {/* Full 3D orbit controls for floor plan */}
+          <OrbitControls
+            enableDamping
+            dampingFactor={0.05}
+            minDistance={5}
+            maxDistance={150}
+            maxPolarAngle={Math.PI / 2.05}
+          />
+        </>
+      ) : (
+        <>
+          {/* Invisible grid plane for click detection */}
+          <mesh
+            ref={gridPlaneRef}
+            name="click-detection-plane"
+            userData={{ excludeFromExport: true }}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0, 0]}
+            onClick={handleGridClick}
+            onPointerMove={handlePointerMove}
+            visible={false}
+          >
+            <planeGeometry args={[1000, 1000]} />
+            <meshBasicMaterial transparent opacity={0} />
           </mesh>
-        </group>
+
+          {/* Grid */}
+          <group name="grid-helper" userData={{ excludeFromExport: true }}>
+            <Grid
+              position={[0, -0.01, 0]}
+              args={[100, 100]}
+              cellSize={1}
+              cellThickness={0.5}
+              cellColor="#a0a0a0"
+              sectionSize={5}
+              sectionThickness={1}
+              sectionColor="#707070"
+              fadeDistance={100}
+              fadeStrength={1}
+              infiniteGrid
+            />
+          </group>
+
+          {/* Ghost building preview */}
+          {placementMode && ghostPosition && (
+            <group position={[ghostPosition.x, ghostPosition.y + (DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors) / 2, ghostPosition.z]}>
+              <mesh>
+                <boxGeometry args={[DEFAULT_BUILDING_SPEC.width, DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors, DEFAULT_BUILDING_SPEC.depth]} />
+                <meshStandardMaterial color={isSnapped ? "#22c55e" : "#3b82f6"} transparent opacity={0.4} />
+              </mesh>
+            </group>
+          )}
+
+          {/* Buildings */}
+          {buildings.map((building) => (
+            <BuildingWrapper
+              key={building.id}
+              building={building}
+              isSelected={building.id === selectedBuildingId}
+              onSelect={() => selectBuilding(building.id)}
+            />
+          ))}
+
+          {/* Controls */}
+          <OrbitControls
+            enableDamping
+            dampingFactor={0.05}
+            minDistance={10}
+            maxDistance={200}
+          />
+        </>
       )}
-
-      {/* Buildings */}
-      {buildings.map((building) => (
-        <BuildingWrapper
-          key={building.id}
-          building={building}
-          isSelected={building.id === selectedBuildingId}
-          onSelect={() => selectBuilding(building.id)}
-        />
-      ))}
-
-      {/* Controls */}
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.05}
-        minDistance={10}
-        maxDistance={200}
-      />
     </>
   );
 }

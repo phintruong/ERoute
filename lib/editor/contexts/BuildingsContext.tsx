@@ -30,6 +30,10 @@ interface BuildingsContextType {
 
   // Get selected building
   getSelectedBuilding: () => BuildingInstance | null;
+
+  // Floor plan viewer
+  floorPlanRoomType: string | null;
+  setFloorPlanRoomType: (roomType: string | null) => void;
 }
 
 const BuildingsContext = createContext<BuildingsContextType | undefined>(undefined);
@@ -44,6 +48,7 @@ export function BuildingsProvider({ children }: BuildingsProviderProps) {
   const [selectedBuildingIds, setSelectedBuildingIds] = useState<BuildingId[]>([]);
   const [placementMode, setPlacementMode] = useState(false);
   const [mergeMode, setMergeMode] = useState(false);
+  const [floorPlanRoomType, setFloorPlanRoomType] = useState<string | null>(null);
 
   const addBuilding = useCallback((position: { x: number; y: number; z: number }, spec?: Partial<BuildingSpecification>) => {
     const newId = `building-${Date.now()}`;
@@ -246,6 +251,8 @@ export function BuildingsProvider({ children }: BuildingsProviderProps) {
     getGroupMembers,
     setPlacementMode,
     getSelectedBuilding,
+    floorPlanRoomType,
+    setFloorPlanRoomType,
   };
 
   return (
