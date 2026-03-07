@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -7,6 +7,12 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-sans",
+});
+
+const inter = Inter({
+  weight: ["400", "500", "600"],
+  subsets: ["latin"],
+  variable: "--font-readable",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${plusJakarta.variable} antialiased font-sans`}
+        className={`${plusJakarta.variable} ${inter.variable} antialiased font-sans`}
       >
         {children}
         <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js" async></script>

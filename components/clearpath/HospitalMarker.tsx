@@ -31,7 +31,7 @@ export default function HospitalMarker({ name, occupancyPct, waitMinutes, isReco
       >
         <span className="text-white text-xs font-bold">{Math.round(occupancyPct)}%</span>
       </div>
-      <div className="mt-1 px-2 py-0.5 bg-white/90 backdrop-blur rounded shadow text-[10px] font-bold text-slate-800 whitespace-nowrap">
+      <div className="mt-1 px-2 py-0.5 bg-white/90 backdrop-blur rounded shadow text-[10px] font-semibold text-slate-800 whitespace-nowrap font-readable">
         {name}
       </div>
       <div className="text-[9px] text-slate-500 font-medium">

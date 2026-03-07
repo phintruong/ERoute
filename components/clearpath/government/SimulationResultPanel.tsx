@@ -41,7 +41,7 @@ export default function SimulationResultPanel({ result, hospitals }: SimulationR
           <tbody>
             {rows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 last:border-0">
-                <td className="px-3 py-2 font-medium text-slate-800 truncate max-w-[120px]">{row.name}</td>
+                <td className="px-3 py-2 font-medium text-slate-800 truncate max-w-[120px] font-readable">{row.name}</td>
                 <td className="text-right px-2 py-2 text-slate-600">{row.before}%</td>
                 <td className="text-right px-2 py-2 text-slate-600">{row.after}%</td>
                 <td className={`text-right px-3 py-2 font-bold ${

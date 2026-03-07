@@ -30,7 +30,7 @@ function HospitalCard({ scored, rank, onShowRoute, isRouteActive }: { scored: Sc
               Best Match
             </span>
           )}
-          <p className={`font-bold ${rank === 1 ? 'text-base text-blue-700' : 'text-sm text-slate-700'}`}>
+          <p className={`font-readable font-semibold ${rank === 1 ? 'text-base text-blue-700' : 'text-sm text-slate-700'}`}>
             {h.name}
           </p>
         </div>
