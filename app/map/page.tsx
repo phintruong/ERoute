@@ -34,6 +34,17 @@ export default function MapPage() {
     setSelectedCity(city);
   }, []);
 
+  const handleModeChange = useCallback((newMode: 'government' | 'civilian') => {
+    setMode(newMode);
+    if (newMode === 'government') {
+      setRecommendedHospital(null);
+      setTrafficPrediction(null);
+    } else {
+      setProposedLocation(null);
+      setSimulationResult(null);
+    }
+  }, []);
+
   const handleRecommendation = useCallback((result: any, routeParams?: any) => {
     setRecommendedHospital(result);
     if (routeParams) lastRouteParamsRef.current = routeParams;
@@ -118,15 +129,20 @@ export default function MapPage() {
           <span aria-hidden>←</span>
           Back
         </Link>
-        <ModeToggle mode={mode} onChange={setMode} />
-        <CitySelector
-          cities={CITIES}
-          currentCityId={selectedCity.id}
-          onCityChange={handleCityChange}
-        />
+        <ModeToggle mode={mode} onChange={handleModeChange} />
+        {mode === 'civilian' && (
+          <CitySelector
+            cities={CITIES}
+            currentCityId={selectedCity.id}
+            onCityChange={handleCityChange}
+          />
+        )}
         <div className='flex-1 min-h-0'>
           {mode === 'government' ? (
-            <GovernmentSidebar onSimulationResult={setSimulationResult} />
+            <GovernmentSidebar
+              cityId={selectedCity.id}
+              onSimulationResult={setSimulationResult}
+            />
           ) : (
             <CivilianPanel onRecommendation={handleRecommendation} />
           )}

@@ -8,6 +8,7 @@ import CongestionLayer from './CongestionLayer';
 import FlowArcs from './FlowArcs';
 import HospitalFootprintsLayer from './HospitalFootprintsLayer';
 import LandmarksLayer from './LandmarksLayer';
+import TrafficLayer from './government/TrafficLayer';
 import type { CityConfig } from '@/lib/map-3d/types';
 import type { TimelinePrediction } from '@/lib/clearpath/trafficPrediction';
 
@@ -161,7 +162,7 @@ export default function ClearPathMap({
   }, [cityId, cityConfig, mapReady]);
 
   useEffect(() => {
-    if (!mapRef.current || !proposedLocation) {
+    if (!mapRef.current || mode !== 'government' || !proposedLocation) {
       proposedMarkerRef.current?.remove();
       proposedMarkerRef.current = null;
       return;
@@ -187,7 +188,7 @@ export default function ClearPathMap({
         onMapClick?.({ lng: lngLat.lng, lat: lngLat.lat });
       });
     }
-  }, [proposedLocation, onMapClick]);
+  }, [mode, proposedLocation, onMapClick]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -438,12 +439,17 @@ export default function ClearPathMap({
           <HospitalFootprintsLayer map={mapRef.current} />
           <LandmarksLayer map={mapRef.current} />
           <CongestionLayer map={mapRef.current} hospitals={hospitals} congestion={congestion} />
-          <FlowArcs
-            map={mapRef.current}
-            hospitals={hospitals}
-            proposedLocation={proposedLocation ?? null}
-            simulationResult={simulationResult}
-          />
+          {mode === 'government' && (
+            <>
+              <TrafficLayer map={mapRef.current} />
+              <FlowArcs
+                map={mapRef.current}
+                hospitals={hospitals}
+                proposedLocation={proposedLocation ?? null}
+                simulationResult={simulationResult}
+              />
+            </>
+          )}
         </>
       )}
       <style jsx global>{`
