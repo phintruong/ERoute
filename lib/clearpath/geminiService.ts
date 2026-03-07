@@ -23,14 +23,37 @@ export class GeminiTriageError extends Error {
 }
 
 /**
- * Strip markdown code fences and trim. Returns clean string for JSON parse.
+ * Strip markdown and extract JSON from model response (handles extra text before/after).
  */
-function stripMarkdownWrappers(text: string): string {
+function extractJSONString(text: string): string {
   let out = text.trim();
-  const jsonBlock = /^```(?:json)?\s*([\s\S]*?)```\s*$/im.exec(out);
-  if (jsonBlock) {
-    out = jsonBlock[1].trim();
+
+  // 1) Markdown code block: ```json ... ``` or ``` ... ```
+  const codeBlock = /```(?:json)?\s*([\s\S]*?)```/.exec(out);
+  if (codeBlock) {
+    return codeBlock[1].trim();
   }
+
+  // 2) Find first { and matching } to extract a single JSON object
+  const firstBrace = out.indexOf('{');
+  if (firstBrace !== -1) {
+    let depth = 0;
+    let end = -1;
+    for (let i = firstBrace; i < out.length; i++) {
+      if (out[i] === '{') depth++;
+      else if (out[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end !== -1) {
+      return out.slice(firstBrace, end + 1);
+    }
+  }
+
   return out;
 }
 
@@ -38,7 +61,7 @@ function stripMarkdownWrappers(text: string): string {
  * Parse and validate Gemini JSON response. Throws GeminiTriageError if invalid.
  */
 export function safeParseGeminiJSON(text: string): TriageResponse {
-  const raw = stripMarkdownWrappers(text);
+  const raw = extractJSONString(text);
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -65,16 +88,13 @@ export function safeParseGeminiJSON(text: string): TriageResponse {
     throw new GeminiTriageError('reasoning must be a string', 'INVALID_SCHEMA');
   }
 
-  if (reasoning.length > MAX_REASONING_LENGTH) {
-    throw new GeminiTriageError(
-      `reasoning must be under ${MAX_REASONING_LENGTH} characters`,
-      'INVALID_SCHEMA'
-    );
-  }
+  const trimmedReasoning = reasoning.length > MAX_REASONING_LENGTH
+    ? reasoning.slice(0, MAX_REASONING_LENGTH).trim()
+    : reasoning;
 
   return {
     severity: severity as TriageResponse['severity'],
-    reasoning,
+    reasoning: trimmedReasoning,
   };
 }
 
