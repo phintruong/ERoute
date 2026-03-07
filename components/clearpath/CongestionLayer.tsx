@@ -270,7 +270,7 @@ export default function CongestionLayer({ map, hospitals, congestion }: Congesti
     return () => {
       popupRef.current?.remove();
       try {
-        if (map.getStyle()) {
+        if (map && map.getStyle()) {
           if (map.getLayer('hospital-labels')) map.removeLayer('hospital-labels');
           if (map.getLayer(layerId)) map.removeLayer(layerId);
           if (map.getSource(sourceId)) map.removeSource(sourceId);
