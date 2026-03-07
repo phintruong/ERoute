@@ -192,6 +192,7 @@ export default function ClearPathMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    let cancelled = false;
 
     // Clean up previous markers and route
     recommendedMarkerRef.current?.remove();
@@ -205,21 +206,22 @@ export default function ClearPathMap({
     if (map.getLayer('driving-route-anim-line')) map.removeLayer('driving-route-anim-line');
     if (map.getSource('driving-route-anim')) map.removeSource('driving-route-anim');
 
-    // Remove traffic segment layers
+    // Remove traffic segment layers (don't break on gaps — continue to clean all)
     for (let i = 0; i < 200; i++) {
       const lid = `traffic-seg-line-${i}`;
       const sid = `traffic-seg-${i}`;
-      if (!map.getLayer(lid)) break;
-      map.removeLayer(lid);
-      map.removeSource(sid);
+      if (map.getLayer(lid)) map.removeLayer(lid);
+      if (map.getSource(sid)) map.removeSource(sid);
     }
 
     if (map.getLayer('driving-route-line')) map.removeLayer('driving-route-line');
     if (map.getSource('driving-route')) map.removeSource('driving-route');
-    if (map.getLayer('alt-route-line-0')) map.removeLayer('alt-route-line-0');
-    if (map.getSource('alt-route-0')) map.removeSource('alt-route-0');
-    if (map.getLayer('alt-route-line-1')) map.removeLayer('alt-route-line-1');
-    if (map.getSource('alt-route-1')) map.removeSource('alt-route-1');
+
+    // Remove ALL alt routes (dynamic count, not just 0 and 1)
+    for (let i = 0; i < 10; i++) {
+      if (map.getLayer(`alt-route-line-${i}`)) map.removeLayer(`alt-route-line-${i}`);
+      if (map.getSource(`alt-route-${i}`)) map.removeSource(`alt-route-${i}`);
+    }
 
     if (!recommendedHospital) return;
 
@@ -242,123 +244,140 @@ export default function ClearPathMap({
         .addTo(map);
     }
 
-    // Draw traffic-colored route with animated dashes (civilian only; hide in government mode)
-    const routeGeometry = rec.routeGeometry;
-    const congestionSegs = rec.congestionSegments as string[] | undefined;
+    // Use activeRoute if set (from "Show Route" on an alternative), otherwise use recommended
+    const activeRoute = recommendedHospital.activeRoute;
+    const routeSource = activeRoute ?? rec;
+    const routeGeometry = routeSource.routeGeometry;
+    const congestionSegs = routeSource.congestionSegments as string[] | undefined;
 
-    if (routeGeometry && map.isStyleLoaded() && mode !== 'government') {
-      // Background: subtle dark line for depth
-      map.addSource('driving-route', {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: routeGeometry, properties: {} },
-      });
-      map.addLayer({
-        id: 'driving-route-line',
-        type: 'line',
-        source: 'driving-route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#0f172a',
-          'line-width': 8,
-          'line-opacity': 0.35,
-        },
-      });
+    function drawRoute() {
+      if (cancelled || !map) return;
 
-      // Traffic-colored segments on top
-      const trafficSegs = buildTrafficSegments(routeGeometry.coordinates, congestionSegs);
-      trafficSegs.forEach((seg, i) => {
-        const srcId = `traffic-seg-${i}`;
-        const layerId = `traffic-seg-line-${i}`;
-        map.addSource(srcId, {
+      if (routeGeometry && mode !== 'government') {
+        // Background: subtle dark line for depth
+        map.addSource('driving-route', {
           type: 'geojson',
-          data: { type: 'Feature', geometry: seg.geometry, properties: {} },
+          data: { type: 'Feature', geometry: routeGeometry, properties: {} },
         });
         map.addLayer({
-          id: layerId,
+          id: 'driving-route-line',
           type: 'line',
-          source: srcId,
+          source: 'driving-route',
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': CONGESTION_COLORS[seg.congestion] ?? CONGESTION_COLORS.unknown,
-            'line-width': 5,
-            'line-opacity': 0.9,
+            'line-color': '#0f172a',
+            'line-width': 8,
+            'line-opacity': 0.35,
           },
         });
-      });
 
-      // Animated dash overlay that "flows" along the route
-      map.addSource('driving-route-anim', {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: routeGeometry, properties: {} },
-      });
-      map.addLayer({
-        id: 'driving-route-anim-line',
-        type: 'line',
-        source: 'driving-route-anim',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#ffffff',
-          'line-width': 2,
-          'line-opacity': 0.6,
-          'line-dasharray': [0, 4, 3],
-        },
-      });
+        // Traffic-colored segments on top
+        const trafficSegs = buildTrafficSegments(routeGeometry.coordinates, congestionSegs);
+        trafficSegs.forEach((seg, i) => {
+          const srcId = `traffic-seg-${i}`;
+          const layerId = `traffic-seg-line-${i}`;
+          map.addSource(srcId, {
+            type: 'geojson',
+            data: { type: 'Feature', geometry: seg.geometry, properties: {} },
+          });
+          map.addLayer({
+            id: layerId,
+            type: 'line',
+            source: srcId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': CONGESTION_COLORS[seg.congestion] ?? CONGESTION_COLORS.unknown,
+              'line-width': 5,
+              'line-opacity': 0.9,
+            },
+          });
+        });
 
-      // Animate the dash offset
-      let dashOffset = 0;
-      const avgSpeed = congestionSegs?.length
-        ? congestionSegs.reduce((sum, c) => sum + (CONGESTION_SPEED[c] ?? 1.8), 0) / congestionSegs.length
-        : 1.8;
+        // Animated dash overlay that "flows" along the route
+        map.addSource('driving-route-anim', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: routeGeometry, properties: {} },
+        });
+        map.addLayer({
+          id: 'driving-route-anim-line',
+          type: 'line',
+          source: 'driving-route-anim',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 2,
+            'line-opacity': 0.6,
+            'line-dasharray': [0, 4, 3],
+          },
+        });
 
-      function animateDash() {
-        const currentMap = mapRef.current;
-        if (!currentMap) return;
-        dashOffset -= avgSpeed * 0.15;
-        const phase = ((dashOffset % 7) + 7) % 7;
-        try {
-          if (!currentMap.getLayer('driving-route-anim-line')) return;
-          currentMap.setPaintProperty('driving-route-anim-line', 'line-dasharray', [phase, 4, 3]);
-        } catch {
-          return;
+        // Animate the dash offset
+        let dashOffset = 0;
+        const avgSpeed = congestionSegs?.length
+          ? congestionSegs.reduce((sum, c) => sum + (CONGESTION_SPEED[c] ?? 1.8), 0) / congestionSegs.length
+          : 1.8;
+
+        function animateDash() {
+          const currentMap = mapRef.current;
+          if (!currentMap || cancelled) return;
+          dashOffset -= avgSpeed * 0.15;
+          const phase = ((dashOffset % 7) + 7) % 7;
+          try {
+            if (!currentMap.getLayer('driving-route-anim-line')) return;
+            currentMap.setPaintProperty('driving-route-anim-line', 'line-dasharray', [phase, 4, 3]);
+          } catch {
+            return;
+          }
+          trafficAnimRef.current = requestAnimationFrame(animateDash);
         }
         trafficAnimRef.current = requestAnimationFrame(animateDash);
       }
-      trafficAnimRef.current = requestAnimationFrame(animateDash);
-    }
 
-    // Draw alternative routes as dashed lines (civilian only)
-    const alts = mode === 'government' ? [] : (recommendedHospital.alternatives ?? []);
-    alts.forEach((alt: any, i: number) => {
-      if (alt.routeGeometry && map.isStyleLoaded()) {
-        map.addSource(`alt-route-${i}`, {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: alt.routeGeometry, properties: {} },
-        });
-        map.addLayer({
-          id: `alt-route-line-${i}`,
-          type: 'line',
-          source: `alt-route-${i}`,
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': '#94a3b8',
-            'line-width': 3,
-            'line-opacity': 0.4,
-            'line-dasharray': [2, 2],
-          },
-        });
+      // Draw alternative routes as dashed lines (civilian only)
+      const alts = mode === 'government' ? [] : (recommendedHospital.alternatives ?? []);
+      alts.forEach((alt: any, i: number) => {
+        if (alt.routeGeometry) {
+          map.addSource(`alt-route-${i}`, {
+            type: 'geojson',
+            data: { type: 'Feature', geometry: alt.routeGeometry, properties: {} },
+          });
+          map.addLayer({
+            id: `alt-route-line-${i}`,
+            type: 'line',
+            source: `alt-route-${i}`,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': '#94a3b8',
+              'line-width': 3,
+              'line-opacity': 0.4,
+              'line-dasharray': [2, 2],
+            },
+          });
+        }
+      });
+
+      // Fit bounds to show user + hospital
+      if (userLoc && routeGeometry?.coordinates) {
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([userLoc.lng, userLoc.lat]);
+        bounds.extend([h.longitude, h.latitude]);
+        routeGeometry.coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
+        map.fitBounds(bounds, { padding: 80, maxZoom: 14 });
+      } else {
+        map.flyTo({ center: [h.longitude, h.latitude], zoom: 13, speed: 1.2 });
       }
-    });
-
-    // Fit bounds to show user + hospital
-    if (userLoc && routeGeometry?.coordinates) {
-      const bounds = new mapboxgl.LngLatBounds();
-      bounds.extend([userLoc.lng, userLoc.lat]);
-      bounds.extend([h.longitude, h.latitude]);
-      routeGeometry.coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
-      map.fitBounds(bounds, { padding: 80, maxZoom: 14 });
-    } else {
-      map.flyTo({ center: [h.longitude, h.latitude], zoom: 13, speed: 1.2 });
     }
+
+    // Wait for map style to be loaded before drawing layers
+    if (map.isStyleLoaded()) {
+      drawRoute();
+    } else {
+      map.once('styledata', drawRoute);
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [recommendedHospital, mode]);
 
   // Update route progress + traffic colors when the timeline slider moves
@@ -368,8 +387,10 @@ export default function ClearPathMap({
 
     const predSegs = trafficPrediction.segments;
     const rec = recommendedHospital?.recommended ?? recommendedHospital;
-    const routeGeometry = rec?.routeGeometry;
-    const baseCongestion = rec?.congestionSegments as string[] | undefined;
+    const activeRoute = recommendedHospital?.activeRoute;
+    const routeSource = activeRoute ?? rec;
+    const routeGeometry = routeSource?.routeGeometry;
+    const baseCongestion = routeSource?.congestionSegments as string[] | undefined;
 
     if (!routeGeometry?.coordinates) return;
 

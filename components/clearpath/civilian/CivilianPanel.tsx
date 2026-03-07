@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import VitalsCapture from './VitalsCapture';
 import SymptomCards from './SymptomCards';
 import RoutingResult from './RoutingResult';
@@ -8,11 +8,12 @@ import { VitalsPayload, SymptomsPayload } from '@/lib/clearpath/types';
 
 interface CivilianPanelProps {
   onRecommendation: (result: any, routeParams?: any) => void;
+  currentRecommendation?: any;
 }
 
 type Step = 'address' | 'vitals' | 'symptoms' | 'loading' | 'result';
 
-export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) {
+export default function CivilianPanel({ onRecommendation, currentRecommendation }: CivilianPanelProps) {
   const [step, setStep] = useState<Step>('address');
   const [postalCode, setPostalCode] = useState('');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -23,6 +24,26 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
   const [routeResult, setRouteResult] = useState<any>(null);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync state when page.tsx updates recommendation (e.g. from a reroute)
+  useEffect(() => {
+    if (currentRecommendation && currentRecommendation !== routeResult) {
+      setRouteResult(currentRecommendation);
+      // If an activeRoute is set (from Show Route), use its hospital ID
+      const activeRoute = currentRecommendation.activeRoute;
+      if (activeRoute) {
+        setActiveRouteId(
+          activeRoute.hospital?.id ?? (activeRoute.hospital as any)?._id ?? null
+        );
+      } else {
+        setActiveRouteId(
+          currentRecommendation.recommended?.hospital?.id ??
+          (currentRecommendation.recommended?.hospital as any)?._id ??
+          null
+        );
+      }
+    }
+  }, [currentRecommendation, routeResult]);
 
   const handleUseMyLocation = useCallback(() => {
     setLocating(true);
@@ -151,7 +172,7 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
 
         const route = await routeRes.json();
         setRouteResult(route);
-        setActiveRouteId(route.recommended?.hospital?.id ?? route.recommended?.hospital?._id ?? null);
+        setActiveRouteId(route.recommended?.hospital?.id ?? (route.recommended?.hospital as any)?._id ?? null);
         onRecommendation(route, routeBody);
         setStep('result');
       } catch (err) {
@@ -178,27 +199,24 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
   const handleShowRoute = useCallback(
     (scored: import('@/lib/clearpath/types').ScoredHospital) => {
       if (!routeResult) return;
-      const hId = scored.hospital?.id ?? scored.hospital?._id ?? null;
+      const hId = scored.hospital?.id ?? (scored.hospital as any)?._id ?? null;
+      // If this route is already showing, do nothing
+      if (hId && hId === activeRouteId) return;
       setActiveRouteId(hId);
-      const swapped = {
+      // Don't swap card positions — just tell the map which route to display
+      const updated = {
         ...routeResult,
-        recommended: scored,
-        alternatives: [
-          routeResult.recommended,
-          ...routeResult.alternatives.filter(
-            (a: any) => (a.hospital?.id ?? a.hospital?._id) !== hId
-          ),
-        ],
+        activeRoute: scored,
       };
-      onRecommendation(swapped);
+      onRecommendation(updated);
     },
-    [routeResult, onRecommendation]
+    [routeResult, activeRouteId, onRecommendation]
   );
 
   const canStart = postalCode.trim().length > 0 || userCoords !== null;
 
   return (
-        <div className="h-full bg-white/95 backdrop-blur-xl shadow-xl border border-sky-100 rounded-3xl p-5 overflow-y-auto">
+    <div className="h-full bg-white/95 backdrop-blur-xl shadow-xl border border-sky-100 rounded-3xl p-5 overflow-y-auto">
       <div className="mb-6">
         <h2 className="text-lg font-black text-sky-700 uppercase tracking-tight">
           ClearPath
@@ -260,11 +278,10 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
           <button
             onClick={() => setStep('vitals')}
             disabled={!canStart}
-            className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-colors ${
-              canStart
-                ? 'bg-sky-500 hover:bg-sky-600 text-white'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
+            className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-colors ${canStart
+              ? 'bg-sky-500 hover:bg-sky-600 text-white'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
           >
             Start Triage
           </button>
@@ -304,11 +321,10 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
           {(['address', 'vitals', 'symptoms', 'result'] as Step[]).map((s, i) => (
             <div
               key={s}
-              className={`flex-1 h-1.5 rounded-full transition-colors ${
-                (['address', 'vitals', 'symptoms', 'loading', 'result'] as Step[]).indexOf(step) >= i
-                  ? 'bg-sky-500'
-                  : 'bg-slate-200'
-              }`}
+              className={`flex-1 h-1.5 rounded-full transition-colors ${(['address', 'vitals', 'symptoms', 'loading', 'result'] as Step[]).indexOf(step) >= i
+                ? 'bg-sky-500'
+                : 'bg-slate-200'
+                }`}
             />
           ))}
         </div>

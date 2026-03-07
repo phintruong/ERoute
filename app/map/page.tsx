@@ -53,48 +53,35 @@ export default function MapPage() {
   }, []);
 
   const handleRerouteRequest = useCallback(async (alert: RerouteAlert) => {
-    const params = lastRouteParamsRef.current;
-    if (!params) {
-      const orig = originalRouteRef.current;
-      if (!orig?.alternatives?.length) return;
-      const bestAlt = orig.alternatives[0];
-      setRecommendedHospital({
-        ...orig,
-        recommended: bestAlt,
-        alternatives: [orig.recommended, ...orig.alternatives.slice(1)],
-      });
-      return;
-    }
+    const orig = recommendedHospital ?? originalRouteRef.current;
+    if (!orig?.alternatives?.length) return;
 
-    setIsRerouting(true);
-    try {
-      const routeRes = await fetch('/api/clearpath/route', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!routeRes.ok) throw new Error('Reroute failed');
-      const route = await routeRes.json();
-      originalRouteRef.current = route;
-      setRecommendedHospital(route);
-    } catch (err) {
-      console.error('Reroute failed, falling back to local swap', err);
-      const orig = originalRouteRef.current;
-      if (orig?.alternatives?.length) {
-        const bestAlt = orig.alternatives[0];
-        setRecommendedHospital({
-          ...orig,
-          recommended: bestAlt,
-          alternatives: [orig.recommended, ...orig.alternatives.slice(1)],
-        });
-      }
-    } finally {
-      setIsRerouting(false);
-    }
-  }, []);
+    // Find the suggested alternative by name, fall back to first alternative
+    const suggestedName = alert.suggestedHospital;
+    const matchIdx = suggestedName
+      ? orig.alternatives.findIndex(
+        (a: any) => (a.hospital?.name ?? a.name) === suggestedName
+      )
+      : 0;
+    const altIdx = matchIdx >= 0 ? matchIdx : 0;
+    const bestAlt = orig.alternatives[altIdx];
+
+    const swapped = {
+      ...orig,
+      recommended: bestAlt,
+      alternatives: [
+        orig.recommended,
+        ...orig.alternatives.filter((_: any, i: number) => i !== altIdx),
+      ],
+      activeRoute: undefined, // clear any "Show Route" override
+    };
+    originalRouteRef.current = swapped;
+    setRecommendedHospital(swapped);
+  }, [recommendedHospital]);
 
   const rec = recommendedHospital?.recommended;
-  const showTimeline = mode === 'civilian' && rec?.routeGeometry;
+  const activeRec = recommendedHospital?.activeRoute ?? rec;
+  const showTimeline = mode === 'civilian' && (activeRec?.routeGeometry || rec?.routeGeometry);
 
   return (
     <div className='fixed inset-0 overflow-hidden'>
@@ -128,18 +115,21 @@ export default function MapPage() {
           {mode === 'government' ? (
             <GovernmentSidebar onSimulationResult={setSimulationResult} />
           ) : (
-            <CivilianPanel onRecommendation={handleRecommendation} />
+            <CivilianPanel
+              onRecommendation={handleRecommendation}
+              currentRecommendation={recommendedHospital}
+            />
           )}
         </div>
       </div>
 
       {showTimeline && (
         <TrafficTimeline
-          congestionSegments={rec.congestionSegments}
-          segmentCount={rec.routeGeometry?.coordinates?.length ?? 0}
+          congestionSegments={activeRec.congestionSegments}
+          segmentCount={activeRec.routeGeometry?.coordinates?.length ?? 0}
           onTimeChange={handleTimeChange}
           onRerouteRequest={handleRerouteRequest}
-          recommended={rec}
+          recommended={activeRec}
           alternatives={recommendedHospital?.alternatives ?? []}
           isRerouting={isRerouting}
         />
