@@ -4,15 +4,19 @@ import { useState, useEffect, useCallback } from 'react';
 import CapacitySlider from './CapacitySlider';
 import ProposedHospitalPin from './ProposedHospitalPin';
 import SimulationResultPanel from './SimulationResultPanel';
+import BlueprintPicker from './BlueprintPicker';
+import type { Blueprint } from '@/lib/clearpath/blueprints';
 
 interface GovernmentSidebarProps {
   cityId: string;
   onSimulationResult: (result: any) => void;
+  onBlueprintChange?: (blueprint: Blueprint | null) => void;
 }
 
-export default function GovernmentSidebar({ cityId, onSimulationResult }: GovernmentSidebarProps) {
+export default function GovernmentSidebar({ cityId, onSimulationResult, onBlueprintChange }: GovernmentSidebarProps) {
   const [proposedLocation, setProposedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [capacity, setCapacity] = useState(100);
+  const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
   const [simResult, setSimResult] = useState<any>(null);
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +61,13 @@ export default function GovernmentSidebar({ cityId, onSimulationResult }: Govern
     }
   }, [proposedLocation, capacity, cityId, onSimulationResult]);
 
+  const handleBlueprintSelect = useCallback((bp: Blueprint) => {
+    const next = selectedBlueprint?.id === bp.id ? null : bp;
+    setSelectedBlueprint(next);
+    if (next) setCapacity(next.beds);
+    onBlueprintChange?.(next);
+  }, [selectedBlueprint, onBlueprintChange]);
+
   return (
     <div className="h-full bg-white/95 backdrop-blur-xl shadow-xl border border-slate-200 rounded-2xl p-5 overflow-y-auto">
       <div className="mb-6">
@@ -82,10 +93,21 @@ export default function GovernmentSidebar({ cityId, onSimulationResult }: Govern
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
           <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">1</span>
-            Place Proposed ER
+            Select Blueprint
           </h3>
           <p className="text-[11px] text-slate-400">
-            Click anywhere on the map to drop a proposed ER location.
+            Choose a building blueprint to place on the map.
+          </p>
+          <BlueprintPicker selected={selectedBlueprint} onSelect={handleBlueprintSelect} />
+        </div>
+
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+          <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">2</span>
+            {selectedBlueprint ? 'Place Building on Map' : 'Place Proposed ER'}
+          </h3>
+          <p className="text-[11px] text-slate-400">
+            Click anywhere on the map to drop {selectedBlueprint ? 'the building' : 'a proposed ER location'}.
           </p>
           {proposedLocation && (
             <ProposedHospitalPin lat={proposedLocation.lat} lng={proposedLocation.lng} />
@@ -94,7 +116,7 @@ export default function GovernmentSidebar({ cityId, onSimulationResult }: Govern
 
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
           <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">2</span>
+            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">3</span>
             Set Capacity
           </h3>
           <CapacitySlider value={capacity} onChange={setCapacity} />
@@ -102,7 +124,7 @@ export default function GovernmentSidebar({ cityId, onSimulationResult }: Govern
 
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
           <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">3</span>
+            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">4</span>
             Run Simulation
           </h3>
           <button

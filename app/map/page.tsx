@@ -9,6 +9,7 @@ import CivilianPanel from '@/components/clearpath/civilian/CivilianPanel';
 import TrafficTimeline from '@/components/clearpath/TrafficTimeline';
 import { CITIES } from '@/lib/map-3d/cities';
 import type { TimelinePrediction, RerouteAlert } from '@/lib/clearpath/trafficPrediction';
+import type { Blueprint } from '@/lib/clearpath/blueprints';
 
 export default function MapPage() {
   const [mode, setMode] = useState<'government' | 'civilian'>('civilian');
@@ -18,6 +19,7 @@ export default function MapPage() {
   const [proposedLocation, setProposedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [trafficPrediction, setTrafficPrediction] = useState<TimelinePrediction | null>(null);
   const [isTimelineDragging, setIsTimelineDragging] = useState(false);
+  const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
 
   const originalRouteRef = useRef<any>(null);
   const lastRouteParamsRef = useRef<any>(null);
@@ -42,6 +44,7 @@ export default function MapPage() {
     } else {
       setProposedLocation(null);
       setSimulationResult(null);
+      setSelectedBlueprint(null);
     }
   }, []);
 
@@ -119,6 +122,7 @@ export default function MapPage() {
         proposedLocation={proposedLocation}
         trafficPrediction={trafficPrediction}
         trafficDragging={isTimelineDragging}
+        selectedBlueprint={selectedBlueprint}
       />
       <div className='absolute top-0 left-0 w-md z-10 flex flex-col gap-3 p-4 max-h-screen overflow-y-auto'>
         <Link
@@ -130,18 +134,17 @@ export default function MapPage() {
           Back
         </Link>
         <ModeToggle mode={mode} onChange={handleModeChange} />
-        {mode === 'civilian' && (
-          <CitySelector
-            cities={CITIES}
-            currentCityId={selectedCity.id}
-            onCityChange={handleCityChange}
-          />
-        )}
+        <CitySelector
+          cities={CITIES}
+          currentCityId={selectedCity.id}
+          onCityChange={handleCityChange}
+        />
         <div className='flex-1 min-h-0'>
           {mode === 'government' ? (
             <GovernmentSidebar
               cityId={selectedCity.id}
               onSimulationResult={setSimulationResult}
+              onBlueprintChange={setSelectedBlueprint}
             />
           ) : (
             <CivilianPanel onRecommendation={handleRecommendation} />
