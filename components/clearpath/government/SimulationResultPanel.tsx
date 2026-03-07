@@ -45,12 +45,11 @@ export default function SimulationResultPanel({ result, hospitals }: SimulationR
             {rows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                 <td className="px-3 py-2 font-medium text-slate-700 truncate max-w-[120px]">{row.name}</td>
-                <td className="text-right px-2 py-2 text-slate-500 font-mono">{row.before}%</td>
-                <td className="text-right px-2 py-2 text-slate-600 font-mono">{row.after}%</td>
-                <td className={`text-right px-3 py-2 font-bold font-mono ${
-                  row.delta < 0 ? 'text-green-600' : row.delta > 0 ? 'text-red-500' : 'text-slate-400'
-                }`}>
-                  {row.delta > 0 ? '+' : ''}{row.delta}%
+                <td className="text-right px-2 py-2 text-slate-500 font-mono">{parseFloat(row.before.toFixed(1))}%</td>
+                <td className="text-right px-2 py-2 text-slate-600 font-mono">{parseFloat(row.after.toFixed(1))}%</td>
+                <td className={`text-right px-3 py-2 font-bold font-mono ${row.delta < 0 ? 'text-green-600' : row.delta > 0 ? 'text-red-500' : 'text-slate-400'
+                  }`}>
+                  {row.delta > 0 ? '+' : ''}{parseFloat(row.delta.toFixed(1))}%
                 </td>
               </tr>
             ))}

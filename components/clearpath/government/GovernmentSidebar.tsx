@@ -69,30 +69,20 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
   }, [selectedBlueprint, onBlueprintChange]);
 
   return (
-    <div className="h-full bg-white/95 backdrop-blur-xl shadow-xl border border-slate-200 rounded-2xl p-5 overflow-y-auto">
+    <div className="h-full bg-white/95 backdrop-blur-xl shadow-xl border border-sky-100 rounded-3xl p-5 overflow-y-auto">
       <div className="mb-6">
-        <div className="flex items-center gap-2.5 mb-1.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-base" aria-hidden>
-            🏛️
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-              Planning Console
-            </h2>
-            <p className="text-[10px] text-slate-400 font-medium">
-              Ontario Ministry of Health
-            </p>
-          </div>
-        </div>
-        <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+        <h2 className="text-lg font-black text-sky-700 uppercase tracking-tight">
+          Planning Console
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
           Simulate new ER placement and assess impact on the regional hospital network.
         </p>
       </div>
 
       <div className="space-y-4">
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-          <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">1</span>
+        <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl space-y-3">
+          <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">1</span>
             Select Blueprint
           </h3>
           <p className="text-[11px] text-slate-400">
@@ -101,9 +91,9 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
           <BlueprintPicker selected={selectedBlueprint} onSelect={handleBlueprintSelect} />
         </div>
 
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-          <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">2</span>
+        <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl space-y-3">
+          <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">2</span>
             {selectedBlueprint ? 'Place Building on Map' : 'Place Proposed ER'}
           </h3>
           <p className="text-[11px] text-slate-400">
@@ -114,27 +104,26 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
           )}
         </div>
 
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-          <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">3</span>
+        <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl">
+          <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">3</span>
             Set Capacity
           </h3>
           <CapacitySlider value={capacity} onChange={setCapacity} />
         </div>
 
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-          <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">4</span>
+        <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl">
+          <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">4</span>
             Run Simulation
           </h3>
           <button
             onClick={runSimulation}
             disabled={!proposedLocation || loading}
-            className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-all ${
-              proposedLocation && !loading
-                ? 'bg-slate-800 hover:bg-slate-700 text-white shadow-md'
-                : 'bg-slate-100 text-slate-300 cursor-not-allowed'
-            }`}
+            className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-all ${proposedLocation && !loading
+                ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-md'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
           >
             {loading ? 'Running Simulation...' : 'Run Voronoi Simulation'}
           </button>

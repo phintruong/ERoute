@@ -12,7 +12,7 @@ export default function CapacitySlider({ value, onChange }: CapacitySliderProps)
         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           ER Bed Capacity
         </label>
-        <span className="text-sm font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md font-mono">
+        <span className="text-sm font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-md font-mono">
           {value} beds
         </span>
       </div>
@@ -27,7 +27,7 @@ export default function CapacitySlider({ value, onChange }: CapacitySliderProps)
           [&::-webkit-slider-thumb]:appearance-none
           [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
           [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:bg-slate-700
+          [&::-webkit-slider-thumb]:bg-sky-500
           [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
           [&::-webkit-slider-thumb]:shadow-md
           [&::-webkit-slider-thumb]:cursor-grab"
