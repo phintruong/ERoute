@@ -159,13 +159,12 @@ export default function TrafficTimeline({
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
-                        onClick={() => onRerouteRequest(alert)}
+                        onClick={() => { onRerouteRequest(alert); handleDismiss(alert.id); }}
                         disabled={isRerouting}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${
-                          alert.severity === 'critical'
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${alert.severity === 'critical'
                             ? 'bg-red-500 hover:bg-red-400 text-white'
                             : 'bg-amber-500 hover:bg-amber-400 text-slate-900'
-                        } ${isRerouting ? 'opacity-50 cursor-wait' : ''}`}
+                          } ${isRerouting ? 'opacity-50 cursor-wait' : ''}`}
                       >
                         {isRerouting ? 'Rerouting...' : 'Accept Reroute'}
                       </button>
