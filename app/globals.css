@@ -21,6 +21,7 @@ body {
   .instrument {
     font-family: var(--font-sans), "Plus Jakarta Sans", sans-serif;
   }
+
   .lp {
     min-height: 100vh;
     background: #f0f9ff;
@@ -71,11 +72,9 @@ body {
     pointer-events: none;
     background:
       linear-gradient(to top, rgba(0, 0, 0, 0.2) 0%, transparent 50%),
-      radial-gradient(
-        ellipse 80% 80% at 50% 50%,
+      radial-gradient(ellipse 80% 80% at 50% 50%,
         transparent 50%,
-        rgba(0, 0, 0, 0.08) 100%
-      );
+        rgba(0, 0, 0, 0.08) 100%);
   }
 
   .lp-hero-title {
@@ -170,9 +169,9 @@ body {
   /* main statement line */
   .lp-stmt-main {
     font-family: var(--font-sans), "Plus Jakarta Sans", sans-serif;
-    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    font-size: clamp(2.2rem, 4.5vw, 3.4rem);
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 1.35;
     color: #1e293b;
     margin: 0 0 3rem;
     letter-spacing: -0.01em;
@@ -188,13 +187,12 @@ body {
     margin: 0 0 3.5rem;
   }
 
-  /* ER accent — the showpiece */
+  /* ER accent — styled outside layer for specificity */
   .lp-stmt-gold {
-    font-family: var(--font-sans), "Plus Jakarta Sans", sans-serif;
-    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-size: inherit !important;
     font-style: italic;
     font-weight: 400;
-    line-height: 1;
+    line-height: inherit;
     letter-spacing: -0.01em;
     color: #0ea5e9;
     animation: goldShimmer 6s ease-in-out infinite;
@@ -442,10 +440,12 @@ body {
 }
 
 @keyframes goldShimmer {
+
   0%,
   100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -531,11 +531,9 @@ h3,
 
 /* Map gradient overlay */
 .map-gradient {
-  background: radial-gradient(
-    circle at center,
-    transparent 0%,
-    rgba(241, 245, 249, 0.6) 100%
-  );
+  background: radial-gradient(circle at center,
+      transparent 0%,
+      rgba(241, 245, 249, 0.6) 100%);
 }
 
 /* Custom scrollbar for light theme */

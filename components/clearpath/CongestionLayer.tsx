@@ -168,7 +168,7 @@ export default function CongestionLayer({ map, hospitals, congestion }: Congesti
           <div style="margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
               <span style="font-size:11px; color:#64748b;">Occupancy</span>
-              <span style="font-size:11px; font-weight:700; color:${color};">${pct}% — ${label}</span>
+              <span style="font-size:11px; font-weight:700; color:${color};">${pct}% - ${label}</span>
             </div>
             <div style="
               width:100%; height:6px; border-radius:3px;
