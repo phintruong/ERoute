@@ -83,7 +83,7 @@ export function WindowForm({ spec, onUpdate }: WindowFormProps) {
             <input
               type="range"
               min="1"
-              max="10"
+              max="6"
               step="1"
               value={spec.windowRows}
               onChange={(e) => { onUpdate({ windowRows: parseInt(e.target.value) }); playSound('window_add'); }}
@@ -99,7 +99,7 @@ export function WindowForm({ spec, onUpdate }: WindowFormProps) {
               <input
                 type="range"
                 min="0.5"
-                max="3"
+                max="2"
                 step="0.1"
                 value={spec.windowWidth || 1.2}
                 onChange={(e) => handleWindowUpdate({ windowWidth: parseFloat(e.target.value) })}
@@ -113,7 +113,7 @@ export function WindowForm({ spec, onUpdate }: WindowFormProps) {
               <input
                 type="range"
                 min="0.5"
-                max="3"
+                max="2"
                 step="0.1"
                 value={spec.windowHeight || 1.8}
                 onChange={(e) => handleWindowUpdate({ windowHeight: parseFloat(e.target.value) })}

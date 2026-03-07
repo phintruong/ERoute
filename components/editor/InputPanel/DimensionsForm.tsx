@@ -25,7 +25,7 @@ export function DimensionsForm({ spec, onUpdate, buildingId }: DimensionsFormPro
     const currentZ = currentBuilding.position.z;
     const currentHeight = spec.floorHeight * spec.numberOfFloors;
 
-    let maxAllowed = 50; // Default max
+    let maxAllowed = 150; // Default max (supports hospital-scale buildings)
 
     for (const other of buildings) {
       if (other.id === buildingId) continue;
@@ -119,7 +119,7 @@ export function DimensionsForm({ spec, onUpdate, buildingId }: DimensionsFormPro
   const { maxHeight, hasBuildingAbove } = getMaxHeight();
 
   // Calculate max floors based on current floor height
-  const maxFloors = hasBuildingAbove ? Math.max(1, Math.floor(maxHeight / spec.floorHeight)) : 20;
+  const maxFloors = hasBuildingAbove ? Math.max(1, Math.floor(maxHeight / spec.floorHeight)) : 15;
   // Calculate max floor height based on current number of floors
   const maxFloorHeight = hasBuildingAbove ? Math.max(2.5, maxHeight / spec.numberOfFloors) : 6;
 
@@ -130,7 +130,7 @@ export function DimensionsForm({ spec, onUpdate, buildingId }: DimensionsFormPro
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-700">
           Width (meters): <span className="text-blue-600">{spec.width}</span>
-          {maxWidth < 50 && <span className="text-orange-500 text-xs ml-2">(max: {maxWidth.toFixed(1)}m)</span>}
+          {maxWidth < 150 && <span className="text-orange-500 text-xs ml-2">(max: {maxWidth.toFixed(1)}m)</span>}
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -161,7 +161,7 @@ export function DimensionsForm({ spec, onUpdate, buildingId }: DimensionsFormPro
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-700">
           Depth (meters): <span className="text-blue-600">{spec.depth}</span>
-          {maxDepth < 50 && <span className="text-orange-500 text-xs ml-2">(max: {maxDepth.toFixed(1)}m)</span>}
+          {maxDepth < 150 && <span className="text-orange-500 text-xs ml-2">(max: {maxDepth.toFixed(1)}m)</span>}
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -192,7 +192,7 @@ export function DimensionsForm({ spec, onUpdate, buildingId }: DimensionsFormPro
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-700">
           Number of Floors: <span className="text-blue-600">{spec.numberOfFloors}</span>
-          {hasBuildingAbove && maxFloors < 20 && <span className="text-orange-500 text-xs ml-2">(max: {maxFloors})</span>}
+          {hasBuildingAbove && maxFloors < 15 && <span className="text-orange-500 text-xs ml-2">(max: {maxFloors})</span>}
         </label>
         <div className="flex items-center gap-3">
           <input

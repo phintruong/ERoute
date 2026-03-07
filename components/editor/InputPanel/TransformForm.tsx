@@ -40,8 +40,8 @@ export function TransformForm({
             <div className="flex items-center gap-3">
               <input
                 type="range"
-                min="-100"
-                max="100"
+                min="-30"
+                max="30"
                 step="0.5"
                 value={position.x}
                 onChange={(e) => handlePositionChange({ x: parseFloat(e.target.value) })}
@@ -49,8 +49,8 @@ export function TransformForm({
               />
               <input
                 type="number"
-                min="-100"
-                max="100"
+                min="-30"
+                max="30"
                 step="0.5"
                 value={position.x}
                 onChange={(e) => handlePositionChange({ x: parseFloat(e.target.value) })}
@@ -66,8 +66,8 @@ export function TransformForm({
             <div className="flex items-center gap-3">
               <input
                 type="range"
-                min="-100"
-                max="100"
+                min="-30"
+                max="30"
                 step="0.5"
                 value={position.z}
                 onChange={(e) => handlePositionChange({ z: parseFloat(e.target.value) })}
@@ -75,8 +75,8 @@ export function TransformForm({
               />
               <input
                 type="number"
-                min="-100"
-                max="100"
+                min="-30"
+                max="30"
                 step="0.5"
                 value={position.z}
                 onChange={(e) => handlePositionChange({ z: parseFloat(e.target.value) })}

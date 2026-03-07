@@ -3,15 +3,17 @@ import { useBuildings } from '@/lib/editor/contexts/BuildingsContext';
 import { TransformForm } from './TransformForm';
 import { DimensionsForm } from './DimensionsForm';
 import { WindowForm } from './WindowForm';
+import { HospitalForm } from './HospitalForm';
 import { BuildingList } from './BuildingList';
 import { DEFAULT_BUILDING_SPEC } from '@/lib/editor/types/buildingSpec';
 
-type SettingsTab = 'transform' | 'dimensions' | 'windows';
+type SettingsTab = 'transform' | 'dimensions' | 'windows' | 'hospital';
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: 'transform', label: 'Transform' },
   { id: 'dimensions', label: 'Dimensions' },
   { id: 'windows', label: 'Windows' },
+  { id: 'hospital', label: 'Hospital' },
 ];
 
 export function InputPanel() {
@@ -102,6 +104,9 @@ export function InputPanel() {
               )}
               {activeTab === 'windows' && (
                 <WindowForm spec={selectedBuilding.spec} onUpdate={handleUpdate} />
+              )}
+              {activeTab === 'hospital' && (
+                <HospitalForm spec={selectedBuilding.spec} onUpdate={handleUpdate} />
               )}
             </div>
           </div>
