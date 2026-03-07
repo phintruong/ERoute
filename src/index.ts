@@ -2,8 +2,10 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { mockHospitals, mockCongestion } from './mocks';
+import { connectDB } from './db';
 
 dotenv.config();
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 8000;
