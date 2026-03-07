@@ -83,7 +83,7 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
   };
 
   return (
-    <div className="h-full bg-white/95 backdrop-blur-md shadow-2xl border-r border-slate-200 p-5 overflow-y-auto">
+    <div className="h-full bg-white/90 backdrop-blur-xl shadow-[0_18px_50px_rgba(15,23,42,0.65)] border border-white/20 rounded-3xl p-5 overflow-y-auto">
       <div className="mb-6">
         <h2 className="text-lg font-black text-red-700 uppercase tracking-tight">
           ClearPath ER
@@ -94,14 +94,14 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+        <div className="mb-4 p-3 bg-red-50/95 border border-red-200/80 rounded-2xl text-xs text-red-700 shadow-sm">
           {error}
         </div>
       )}
 
       {step === 'address' && (
         <div className="space-y-4">
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+          <div className="p-4 bg-slate-50/90 border border-slate-200/70 rounded-2xl shadow-sm">
             <label className="text-[10px] font-bold text-slate-600 uppercase block mb-2">
               Your Postal Code / Address
             </label>
@@ -110,12 +110,12 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value)}
               placeholder="e.g. M5B 1W8"
-              className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
             />
           </div>
           <button
             onClick={() => setStep('vitals')}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold uppercase tracking-wide transition-colors"
+            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-full text-sm font-bold uppercase tracking-wide transition-colors"
           >
             Start Triage
           </button>
