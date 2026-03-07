@@ -7,7 +7,7 @@ export const MOCK_HOSPITALS: Record<string, MapHospitalMarker[]> = {
     { id: 'th-3', name: 'Sunnybrook Health Centre', lng: -79.363, lat: 43.722, occupancyPct: 58, waitMinutes: 30 },
     { id: 'th-4', name: 'Toronto Western Hospital', lng: -79.406, lat: 43.654, occupancyPct: 68, waitMinutes: 40 },
   ],
-  kitchener: [
+  waterloo: [
     { id: 'kh-1', name: 'Grand River Hospital', lng: -80.493, lat: 43.448, occupancyPct: 65, waitMinutes: 35 },
     { id: 'kh-2', name: 'St. Mary\'s General Hospital', lng: -80.478, lat: 43.442, occupancyPct: 78, waitMinutes: 50 },
     { id: 'kh-3', name: 'Cambridge Memorial Hospital', lng: -80.312, lat: 43.361, occupancyPct: 55, waitMinutes: 25 },

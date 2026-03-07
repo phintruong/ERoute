@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/clearpath/mongoClient';
 
 export async function GET(req: NextRequest) {
-  const city = req.nextUrl.searchParams.get('city') ?? 'toronto';
+  const city = req.nextUrl.searchParams.get('city');
   try {
     const db = await getDb();
+    const query = city ? { city: city.toLowerCase() } : {};
     const hospitals = await db.collection('hospitals')
-      .find({ city: city.toLowerCase() })
+      .find(query)
       .toArray();
     return NextResponse.json(hospitals);
   } catch (e) {

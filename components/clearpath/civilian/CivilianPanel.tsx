@@ -21,16 +21,56 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
   const [symptoms, setSymptoms] = useState<SymptomsPayload | null>(null);
   const [triageResult, setTriageResult] = useState<any>(null);
   const [routeResult, setRouteResult] = useState<any>(null);
+  const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleUseMyLocation = useCallback(() => {
     setLocating(true);
     setError(null);
+
+    if (!navigator.geolocation) {
+      setError('Location is not supported on this device. Please enter a postal code.');
+      setLocating(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setPostalCode('');
-        setLocating(false);
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserCoords(coords);
+
+        // Reverse geocode to show postal code in the input
+        (async () => {
+          try {
+            const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+            if (!token) {
+              return;
+            }
+
+            const url =
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+              `${coords.lng},${coords.lat}.json` +
+              `?country=ca&types=postcode&limit=1&access_token=${token}`;
+
+            const res = await fetch(url);
+            if (!res.ok) return;
+
+            const data: any = await res.json();
+            const feature = data.features?.[0];
+            const code =
+              feature?.text ||
+              feature?.properties?.postalcode ||
+              (typeof feature?.place_name === 'string' ? feature.place_name.split(',')[0] : undefined);
+
+            if (code) {
+              setPostalCode(code as string);
+            }
+          } catch (err) {
+            console.error('Reverse geocoding failed', err);
+          } finally {
+            setLocating(false);
+          }
+        })();
       },
       () => {
         setError('Could not get your location. Please enter a postal code.');
@@ -111,6 +151,7 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
 
         const route = await routeRes.json();
         setRouteResult(route);
+        setActiveRouteId(route.recommended?.hospital?.id ?? route.recommended?.hospital?._id ?? null);
         onRecommendation(route);
         setStep('result');
       } catch (err) {
@@ -128,10 +169,31 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
     setSymptoms(null);
     setTriageResult(null);
     setRouteResult(null);
+    setActiveRouteId(null);
     setUserCoords(null);
     setError(null);
     onRecommendation(null);
   };
+
+  const handleShowRoute = useCallback(
+    (scored: import('@/lib/clearpath/types').ScoredHospital) => {
+      if (!routeResult) return;
+      const hId = scored.hospital?.id ?? scored.hospital?._id ?? null;
+      setActiveRouteId(hId);
+      const swapped = {
+        ...routeResult,
+        recommended: scored,
+        alternatives: [
+          routeResult.recommended,
+          ...routeResult.alternatives.filter(
+            (a: any) => (a.hospital?.id ?? a.hospital?._id) !== hId
+          ),
+        ],
+      };
+      onRecommendation(swapped);
+    },
+    [routeResult, onRecommendation]
+  );
 
   const canStart = postalCode.trim().length > 0 || userCoords !== null;
 
@@ -139,7 +201,7 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
     <div className="h-full bg-white/90 backdrop-blur-xl shadow-[0_18px_50px_rgba(15,23,42,0.65)] border border-white/20 rounded-3xl p-5 overflow-y-auto">
       <div className="mb-6">
         <h2 className="text-lg font-black text-red-700 uppercase tracking-tight">
-          ClearPath ER
+          ClearPath
         </h2>
         <p className="text-xs text-slate-500 mt-1">
           Find the right ER for your situation.
@@ -232,6 +294,8 @@ export default function CivilianPanel({ onRecommendation }: CivilianPanelProps) 
           recommended={routeResult.recommended}
           alternatives={routeResult.alternatives}
           onBack={resetFlow}
+          onShowRoute={handleShowRoute}
+          activeRouteId={activeRouteId}
         />
       )}
 

@@ -1,7 +1,7 @@
 import { getDb } from './mongoClient';
 
 export const congestionService = {
-  async getCongestion(city: string) {
+  async getCongestion(city?: string) {
     const db = await getDb();
 
     let live: any[] = [];
@@ -15,8 +15,9 @@ export const congestionService = {
       console.warn('Ontario Open Data fetch failed, using MongoDB baseline');
     }
 
+    const query = city ? { city: city.toLowerCase() } : {};
     const hospitals = await db.collection('hospitals')
-      .find({ city: city.toLowerCase() }).toArray();
+      .find(query).toArray();
 
     const snapshots = [];
     for (const h of hospitals) {

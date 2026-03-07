@@ -10,8 +10,8 @@ export const CITIES: CityConfig[] = [
     bearing: -17.6,
   },
   {
-    id: 'kitchener',
-    name: 'Kitchener',
+    id: 'waterloo',
+    name: 'Waterloo',
     center: [-80.4922, 43.4516],
     zoom: 11.5,
     pitch: 45,
