@@ -11,9 +11,6 @@ interface CitySelectorProps {
 export default function CitySelector({ cities, currentCityId, onCityChange }: CitySelectorProps) {
   return (
     <div className="cp-city-wrap">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="cp-city-label">Choose Location</span>
-      </div>
       <div className="relative flex-1 min-w-0">
         <select
           value={currentCityId}
