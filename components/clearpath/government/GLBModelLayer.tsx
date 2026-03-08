@@ -26,10 +26,10 @@ export default function GLBModelLayer({ map, id, glbPath, lngLat, rotation = 0 }
     rotation: 0,
   });
 
-  // Add the custom layer once
+  // Add the custom layer (re-adds after style changes when layer is gone)
   useEffect(() => {
     if (!map) return;
-    if (addedRef.current) return;
+    if (addedRef.current && map.getLayer(layerId)) return;
 
     const camera = new THREE.Camera();
     const scene = new THREE.Scene();

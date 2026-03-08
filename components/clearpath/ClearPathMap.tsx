@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { createMapboxMap } from '@/lib/mapbox/createMap';
@@ -120,6 +120,7 @@ export default function ClearPathMap({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
+  const [styleEpoch, setStyleEpoch] = useState(0);
   const [selectedHospital, setSelectedHospital] = useState<HospitalStatsPanelData | null>(null);
   const [hospitals, setHospitals] = useState<Array<{ _id?: { toString: () => string }; id?: string; name?: string; latitude?: number; longitude?: number; erBeds?: number }>>([]);
   const [congestion, setCongestion] = useState<Array<{ hospitalId: string; occupancyPct: number; waitMinutes: number }>>([]);
@@ -135,6 +136,10 @@ export default function ClearPathMap({
     selectedBlueprintRef.current = selectedBlueprint;
   }, [onMapClick, selectedBlueprint]);
 
+  // Create the map ONCE (no mapStyle dependency — style changes use setStyle below)
+  const mapStyleRef = useRef(mapStyle);
+  mapStyleRef.current = mapStyle;
+
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
@@ -145,7 +150,7 @@ export default function ClearPathMap({
       pitch: 45,
       bearing: -17.6,
       addGlobalBuildings: false,
-      style: mapStyle,
+      style: mapStyleRef.current,
     });
 
     map.on('load', () => {
@@ -177,19 +182,21 @@ export default function ClearPathMap({
       setMapInstance(null);
       setMapReady(false);
     };
-  }, [mapStyle]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Switch styles when mapStyle changes (skip initial render — constructor already set the style)
+  // Switch styles via setStyle — bump epoch so child layers re-add
   const prevStyleRef = useRef(mapStyle);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || mapStyle === prevStyleRef.current) return;
     prevStyleRef.current = mapStyle;
-    map.setStyle(mapStyle);
     setMapReady(false);
+    setSelectedHospital(null);
+    map.setStyle(mapStyle);
     map.once('style.load', () => {
+      setStyleEpoch((e) => e + 1);
       setMapReady(true);
-      setMapInstance(map);
     });
   }, [mapStyle]);
 
@@ -562,7 +569,7 @@ export default function ClearPathMap({
     <div className="absolute inset-0">
       <div ref={mapContainer} className="w-full h-full" />
       {mapReady && (
-        <>
+        <React.Fragment key={styleEpoch}>
           <HospitalFootprintsLayer map={mapInstance} />
           <LandmarksLayer map={mapInstance} />
           <CongestionLayer map={mapInstance} hospitals={hospitals} congestion={congestion} onHospitalSelect={setSelectedHospital} />
@@ -595,7 +602,7 @@ export default function ClearPathMap({
               ))}
             </>
           )}
-        </>
+        </React.Fragment>
       )}
       {selectedHospital && (
         <div className="absolute top-4 right-4 z-30 w-[340px] max-w-[calc(100vw-2rem)] rounded-2xl border border-sky-100 bg-white/95 p-4 shadow-2xl backdrop-blur">
