@@ -142,7 +142,7 @@ export default function ClearPathMap({
 
     map.on('click', (e) => {
       const bp = selectedBlueprintRef.current;
-      if (bp) {
+      if (bp && map.getLayer('suitable-parcels-fill')) {
         const hits = map.queryRenderedFeatures(e.point, { layers: ['suitable-parcels-fill'] });
         if (!hits.length) return;
       }
@@ -541,9 +541,11 @@ export default function ClearPathMap({
               {proposedLocations.map((b) => (
                 <GLBModelLayer
                   key={b.id}
+                  id={b.id}
                   map={mapInstance}
                   glbPath={b.blueprint.glbPath}
                   lngLat={{ lat: b.lat, lng: b.lng }}
+                  rotation={b.rotation}
                 />
               ))}
             </>

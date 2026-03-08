@@ -61,7 +61,7 @@ export default function MapPage() {
   const handleMapClick = useCallback((lngLat: { lng: number; lat: number }, blueprint: Blueprint | null) => {
     if (mode === 'government' && blueprint) {
       const id = `proposed-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      setProposedLocations((prev) => [...prev, { id, lat: lngLat.lat, lng: lngLat.lng, blueprint }]);
+      setProposedLocations((prev) => [...prev, { id, lat: lngLat.lat, lng: lngLat.lng, rotation: 0, blueprint }]);
       window.dispatchEvent(new CustomEvent('clearpath:mapclick', { detail: { lngLat, blueprint } }));
     }
   }, [mode]);

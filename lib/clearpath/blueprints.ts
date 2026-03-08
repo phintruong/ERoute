@@ -2,6 +2,7 @@ export interface ProposedBuilding {
   id: string;
   lat: number;
   lng: number;
+  rotation: number;
   blueprint: Blueprint;
 }
 

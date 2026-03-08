@@ -79,6 +79,16 @@ export default function GovernmentSidebar({
     }
   }, [proposedLocations, cityId, onSimulationResult]);
 
+  const updateBuilding = useCallback(
+    (id: string, updates: Partial<{ lat: number; lng: number; rotation: number }>) => {
+      onProposedLocationsChange(
+        proposedLocations.map((b) => (b.id === id ? { ...b, ...updates } : b))
+      );
+      setSimResult(null);
+    },
+    [proposedLocations, onProposedLocationsChange]
+  );
+
   const removeBuilding = useCallback(
     (id: string) => {
       onProposedLocationsChange(proposedLocations.filter((b) => b.id !== id));
@@ -140,24 +150,76 @@ export default function GovernmentSidebar({
               : 'Choose a blueprint above, then click on highlighted parcels.'}
           </p>
           {proposedLocations.length > 0 && (
-            <div className="space-y-1.5">
-              {proposedLocations.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-white/80 border border-sky-100"
-                >
-                  <span className="text-[11px] font-medium text-slate-700 truncate">
-                    {b.blueprint.name} ({b.blueprint.beds} beds)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeBuilding(b.id)}
-                    className="text-[10px] font-bold text-red-600 hover:text-red-700 px-2 py-0.5 rounded hover:bg-red-50"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-2">
+              {proposedLocations.map((b) => {
+                const degrees = Math.round((b.rotation ?? 0) * (180 / Math.PI));
+                return (
+                  <div key={b.id} className="rounded-lg bg-white/80 border border-sky-100 overflow-hidden p-2 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium text-slate-700 truncate">
+                        {b.blueprint.name} ({b.blueprint.beds} beds)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeBuilding(b.id)}
+                        className="text-[10px] font-bold text-red-600 hover:text-red-700 px-2 py-0.5 rounded hover:bg-red-50 shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {/* Rotation */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                        Rotation: {degrees}°
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        step={5}
+                        value={degrees}
+                        onChange={(e) =>
+                          updateBuilding(b.id, { rotation: Number(e.target.value) * (Math.PI / 180) })
+                        }
+                        className="w-full h-1.5 mt-1 accent-sky-500"
+                      />
+                    </div>
+                    {/* Coordinates */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          Lat
+                        </label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={b.lat.toFixed(6)}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) updateBuilding(b.id, { lat: val });
+                          }}
+                          className="w-full mt-0.5 px-1.5 py-1 text-[11px] rounded border border-slate-200 focus:border-sky-400 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          Lng
+                        </label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={b.lng.toFixed(6)}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) updateBuilding(b.id, { lng: val });
+                          }}
+                          className="w-full mt-0.5 px-1.5 py-1 text-[11px] rounded border border-slate-200 focus:border-sky-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
               <button
                 type="button"
                 onClick={clearAll}

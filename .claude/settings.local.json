@@ -25,7 +25,11 @@
       "Bash(git -C \"c:\\\\Users\\\\phine\\\\OneDrive\\\\Laptop\\\\HACKATHON\\\\qhacks\\\\qhacks\" config user.email)",
       "Bash(git -C \"c:\\\\Users\\\\phine\\\\OneDrive\\\\Laptop\\\\HACKATHON\\\\qhacks\\\\qhacks\" config --get remote.origin.url)",
       "Bash(bun add openai)",
-      "Bash(grep -r \"MAPBOX\\\\|mapbox\" /Users/notjackl3/Desktop/CODING/HackCanada/.env*)"
+      "Bash(grep -r \"MAPBOX\\\\|mapbox\" /Users/notjackl3/Desktop/CODING/HackCanada/.env*)",
+      "Bash(grep -r \"Presage\\\\|presage\" /Users/notjackl3/Desktop/CODING/HackCanada/*.md)",
+      "WebFetch(domain:docs.physiology.presagetech.com)",
+      "WebFetch(domain:physiology.presagetech.com)",
+      "WebFetch(domain:github.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\phine\\OneDrive\\Laptop\\HACKATHON\\qhacks\\qhacks\\public\\sounds",
