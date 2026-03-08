@@ -14,6 +14,7 @@ export function ExportBar({ sceneRef }: ExportBarProps) {
   const [exporting, setExporting] = useState(false);
   const [exportingToMap, setExportingToMap] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [buildingName, setBuildingName] = useState('');
 
   const handleExportGLB = async () => {
     if (!sceneRef.current) {
@@ -59,9 +60,11 @@ export function ExportBar({ sceneRef }: ExportBarProps) {
       return;
     }
 
+    const name = buildingName.trim() || 'Custom Building';
+
     setExportingToMap(true);
     try {
-      const { id } = await exportToMap(sceneRef.current, 'custom-building', buildings);
+      const { id } = await exportToMap(sceneRef.current, name, buildings);
       // Navigate to map with the building ID
       router.push(`/map?buildingId=${id}`);
     } catch (error) {
@@ -105,6 +108,14 @@ export function ExportBar({ sceneRef }: ExportBarProps) {
           </button>
 
           <div className="w-px h-8 bg-gray-600" />
+
+          <input
+            type="text"
+            value={buildingName}
+            onChange={(e) => setBuildingName(e.target.value)}
+            placeholder="Building name..."
+            className="px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-sm text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none w-44"
+          />
 
           <button
             onClick={handleExportToMap}

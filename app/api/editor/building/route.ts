@@ -31,6 +31,9 @@ async function cleanupOldEntries() {
         const stats = await stat(filePath);
         if (stats.mtimeMs < oneDayAgo) {
           await unlink(filePath);
+          // Also remove the JSON sidecar
+          const jsonSidecar = path.join(BUILDINGS_DIR, file.replace('.glb', '.json'));
+          try { await unlink(jsonSidecar); } catch { /* may not exist */ }
           console.log(`🗑️ Cleaned up old building: ${file}`);
         }
       }
