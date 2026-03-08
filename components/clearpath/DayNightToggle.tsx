@@ -1,22 +1,45 @@
 'use client';
 
 interface DayNightToggleProps {
-    isDark: boolean;
-    onToggle: () => void;
+  theme: 'night' | 'day' | 'satellite';
+  onChange: (theme: 'night' | 'day' | 'satellite') => void;
 }
 
-export default function DayNightToggle({ isDark, onToggle }: DayNightToggleProps) {
+export default function DayNightToggle({ theme, onChange }: DayNightToggleProps) {
+  const knobClass =
+    theme === 'day'
+      ? 'cp-theme-knob cp-theme-knob--middle'
+      : theme === 'satellite'
+        ? 'cp-theme-knob cp-theme-knob--right'
+        : 'cp-theme-knob';
+
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="cp-theme-toggle"
-      aria-label={isDark ? 'Switch to day mode' : 'Switch to night mode'}
-      title={isDark ? 'Night mode enabled' : 'Day mode enabled'}
-    >
-      <span className={`cp-theme-label ${isDark ? 'cp-theme-label--active' : ''}`}>Night</span>
-      <span className={`cp-theme-label ${!isDark ? 'cp-theme-label--active' : ''}`}>Day</span>
-      <span className={`cp-theme-knob ${!isDark ? 'cp-theme-knob--right' : ''}`} />
-    </button>
+    <div className="cp-theme-toggle" role="group" aria-label="Map style">
+      <span className={knobClass} />
+      <button
+        type="button"
+        onClick={() => onChange('night')}
+        className={`cp-theme-label ${theme === 'night' ? 'cp-theme-label--active' : ''}`}
+        aria-label="Switch to night mode"
+      >
+        Night
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('day')}
+        className={`cp-theme-label ${theme === 'day' ? 'cp-theme-label--active' : ''}`}
+        aria-label="Switch to day mode"
+      >
+        Day
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('satellite')}
+        className={`cp-theme-label ${theme === 'satellite' ? 'cp-theme-label--active' : ''}`}
+        aria-label="Switch to satellite mode"
+      >
+        Sat
+      </button>
+    </div>
   );
 }

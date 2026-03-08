@@ -28,10 +28,12 @@ export default function MapPage() {
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
   const [customBlueprints, setCustomBlueprints] = useState<Blueprint[]>([]);
   const [importedBlueprint, setImportedBlueprint] = useState<Blueprint | null>(null);
-  const [isDark, setIsDark] = useState(false);
-  const mapStyle = isDark
+  const [mapTheme, setMapTheme] = useState<'night' | 'day' | 'satellite'>('satellite');
+  const mapStyle = mapTheme === 'night'
     ? 'mapbox://styles/mapbox/navigation-night-v1'
-    : 'mapbox://styles/mapbox/satellite-streets-v12';
+    : mapTheme === 'satellite'
+      ? 'mapbox://styles/mapbox/satellite-streets-v12'
+      : 'mapbox://styles/mapbox/navigation-day-v1';
 
   // Handle buildingId query param from editor export
   useEffect(() => {
@@ -144,7 +146,7 @@ export default function MapPage() {
   const showTimeline = mode === 'civilian' && (activeRec?.routeGeometry || rec?.routeGeometry);
 
   return (
-    <div className='fixed inset-0 overflow-hidden'>
+    <div className={`fixed inset-0 overflow-hidden ${mapTheme === 'night' ? 'cp-night' : ''}`}>
       <ClearPathMap
         mode={mode}
         cityId={mapCity.id}
@@ -181,7 +183,7 @@ export default function MapPage() {
             currentCityId={selectedCity?.id ?? ''}
             onCityChange={handleCityChange}
           />
-          <DayNightToggle isDark={isDark} onToggle={() => setIsDark((d) => !d)} />
+          <DayNightToggle theme={mapTheme} onChange={setMapTheme} />
         </div>
         <div className='cp-map-panel-wrap'>
           {mode === 'government' ? (
