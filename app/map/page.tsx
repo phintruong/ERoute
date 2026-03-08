@@ -1,5 +1,6 @@
 'use client';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ClearPathMap from '@/components/clearpath/ClearPathMap';
 import ModeToggle from '@/components/clearpath/ModeToggle';
@@ -8,10 +9,12 @@ import GovernmentSidebar from '@/components/clearpath/government/GovernmentSideb
 import CivilianPanel from '@/components/clearpath/civilian/CivilianPanel';
 import TrafficTimeline from '@/components/clearpath/TrafficTimeline';
 import { CITIES } from '@/lib/map-3d/cities';
+import { createBlueprintFromBuilding, type Blueprint } from '@/lib/clearpath/blueprints';
 import type { TimelinePrediction, RerouteAlert } from '@/lib/clearpath/trafficPrediction';
-import type { Blueprint, ProposedBuilding } from '@/lib/clearpath/blueprints';
+import type { ProposedBuilding } from '@/lib/clearpath/blueprints';
 
 export default function MapPage() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<'government' | 'civilian'>('civilian');
   const [selectedCity, setSelectedCity] = useState(() => CITIES[0]);
   const [simulationResult, setSimulationResult] = useState(null);
@@ -20,6 +23,35 @@ export default function MapPage() {
   const [trafficPrediction, setTrafficPrediction] = useState<TimelinePrediction | null>(null);
   const [isTimelineDragging, setIsTimelineDragging] = useState(false);
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
+  const [customBlueprints, setCustomBlueprints] = useState<Blueprint[]>([]);
+  const [importedBlueprint, setImportedBlueprint] = useState<Blueprint | null>(null);
+
+  // Handle buildingId query param from editor export
+  useEffect(() => {
+    const buildingId = searchParams.get('buildingId');
+    if (!buildingId) return;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/editor/building');
+        if (!res.ok) return;
+        const { buildings } = await res.json();
+        const match = buildings.find((b: any) => b.id === buildingId);
+        if (!match) return;
+
+        const bp = createBlueprintFromBuilding(match);
+        setCustomBlueprints((prev) => {
+          if (prev.some((p) => p.id === bp.id)) return prev;
+          return [bp, ...prev];
+        });
+        setImportedBlueprint(bp);
+        setSelectedBlueprint(bp);
+        setMode('government');
+      } catch (err) {
+        console.error('Failed to load exported building:', err);
+      }
+    })();
+  }, [searchParams]);
 
   const originalRouteRef = useRef<any>(null);
   const lastRouteParamsRef = useRef<any>(null);
@@ -142,6 +174,8 @@ export default function MapPage() {
               onProposedLocationsChange={setProposedLocations}
               onSimulationResult={setSimulationResult}
               onBlueprintChange={setSelectedBlueprint}
+              customBlueprints={customBlueprints}
+              importedBlueprint={importedBlueprint}
             />
           ) : (
             <CivilianPanel

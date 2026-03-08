@@ -11,6 +11,8 @@ interface GovernmentSidebarProps {
   onProposedLocationsChange: (locations: ProposedBuilding[]) => void;
   onSimulationResult: (result: any) => void;
   onBlueprintChange?: (blueprint: Blueprint | null) => void;
+  customBlueprints?: Blueprint[];
+  importedBlueprint?: Blueprint | null;
 }
 
 export default function GovernmentSidebar({
@@ -19,11 +21,21 @@ export default function GovernmentSidebar({
   onProposedLocationsChange,
   onSimulationResult,
   onBlueprintChange,
+  customBlueprints = [],
+  importedBlueprint,
 }: GovernmentSidebarProps) {
-  const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
+  const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(importedBlueprint ?? null);
   const [simResult, setSimResult] = useState<any>(null);
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Auto-select imported blueprint when it arrives
+  useEffect(() => {
+    if (importedBlueprint && selectedBlueprint?.id !== importedBlueprint.id) {
+      setSelectedBlueprint(importedBlueprint);
+      onBlueprintChange?.(importedBlueprint);
+    }
+  }, [importedBlueprint]);
 
   useEffect(() => {
     fetch(`/api/clearpath/hospitals?city=${cityId}`)
@@ -105,7 +117,7 @@ export default function GovernmentSidebar({
           <p className="text-[11px] text-slate-400">
             Choose a building blueprint to place on the map.
           </p>
-          <BlueprintPicker selected={selectedBlueprint} onSelect={handleBlueprintSelect} />
+          <BlueprintPicker selected={selectedBlueprint} onSelect={handleBlueprintSelect} customBlueprints={customBlueprints} />
         </div>
 
         <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl space-y-3">
@@ -157,8 +169,8 @@ export default function GovernmentSidebar({
             onClick={runSimulation}
             disabled={proposedLocations.length === 0 || loading}
             className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-all ${proposedLocations.length > 0 && !loading
-                ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-md'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-md'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
           >
             {loading ? 'Running Simulation...' : 'Run Voronoi Simulation'}

@@ -41,3 +41,22 @@ export const PRESET_BLUEPRINTS: Blueprint[] = [
     minAreaM2: 800,
   },
 ];
+
+/** Build a Blueprint from an exported building returned by the editor API. */
+export function createBlueprintFromBuilding(building: {
+  id: string;
+  name: string;
+  beds: number;
+  publicPath: string;
+  metadata?: { groundFloorArea?: number } | null;
+}): Blueprint {
+  return {
+    id: `custom-${building.id}`,
+    name: building.name || 'Custom Building',
+    description: `${building.beds}-bed custom design`,
+    glbPath: building.publicPath,
+    beds: building.beds,
+    minAreaM2: building.metadata?.groundFloorArea ?? 100,
+  };
+}
+

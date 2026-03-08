@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, readdir, unlink, stat } from 'fs/promises';
+import { readFile, writeFile, mkdir, readdir, unlink, stat } from 'fs/promises';
 import path from 'path';
 
 // Directory where buildings are saved
@@ -52,35 +52,73 @@ export async function POST(request: NextRequest) {
 
     let arrayBuffer: ArrayBuffer;
     let name = 'building';
+    let metadata: Record<string, unknown> | null = null;
 
-    if (contentType.includes('application/octet-stream')) {
-      // Binary GLB data
+    if (contentType.includes('multipart/form-data')) {
+      // FormData from exportToMap — contains glb file + metadata JSON + name
+      const formData = await request.formData();
+      const glbFile = formData.get('glb') as File | null;
+      const metadataStr = formData.get('metadata') as string | null;
+      const nameField = formData.get('name') as string | null;
+
+      if (!glbFile) {
+        return NextResponse.json(
+          { error: 'Missing glb file in form data' },
+          { status: 400 }
+        );
+      }
+
+      arrayBuffer = await glbFile.arrayBuffer();
+      name = nameField || 'building';
+
+      if (metadataStr) {
+        try {
+          metadata = JSON.parse(metadataStr);
+        } catch {
+          console.warn('⚠️ Could not parse metadata JSON, skipping');
+        }
+      }
+    } else if (contentType.includes('application/octet-stream')) {
+      // Binary GLB data (legacy path)
       arrayBuffer = await request.arrayBuffer();
       name = request.headers.get('x-building-name') || 'building';
     } else {
       return NextResponse.json(
-        { error: 'Invalid content type. Expected application/octet-stream' },
+        { error: 'Invalid content type. Expected multipart/form-data or application/octet-stream' },
         { status: 400 }
       );
     }
 
     // Generate unique ID
     const id = generateId();
-    const filename = `${id}.glb`;
-    const filePath = path.join(BUILDINGS_DIR, filename);
+    const glbFilename = `${id}.glb`;
+    const glbPath = path.join(BUILDINGS_DIR, glbFilename);
 
-    // Save the building data to file
+    // Save the GLB file
     const buffer = Buffer.from(arrayBuffer);
-    await writeFile(filePath, buffer);
+    await writeFile(glbPath, buffer);
 
-    console.log(`✅ Saved building to ${filePath} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`);
+    // Save metadata sidecar JSON if present
+    const beds = (metadata as any)?.erBeds ?? (metadata as any)?.totalBeds ?? 50;
+    const sidecar = {
+      id,
+      name,
+      beds,
+      metadata,
+      createdAt: new Date().toISOString(),
+    };
+    const jsonPath = path.join(BUILDINGS_DIR, `${id}.json`);
+    await writeFile(jsonPath, JSON.stringify(sidecar, null, 2));
+
+    console.log(`✅ Saved building to ${glbPath} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB) with metadata`);
 
     return NextResponse.json({
       id,
       name,
+      beds,
       size: arrayBuffer.byteLength,
-      // Return the public URL path for direct access
-      publicPath: `/map-data/buildings/${filename}`,
+      publicPath: `/map-data/buildings/${glbFilename}`,
+      metadata: sidecar,
     });
   } catch (error) {
     console.error('Error storing building:', error);
@@ -91,18 +129,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// List all saved buildings
+// List all saved buildings (enriched with metadata from JSON sidecar)
 export async function GET() {
   try {
     await ensureBuildingsDir();
     const files = await readdir(BUILDINGS_DIR);
-    const buildings = files
-      .filter(f => f.endsWith('.glb'))
-      .map(f => ({
-        id: f.replace('.glb', ''),
+    const buildings = [];
+
+    for (const f of files) {
+      if (!f.endsWith('.glb')) continue;
+      const id = f.replace('.glb', '');
+      const jsonPath = path.join(BUILDINGS_DIR, `${id}.json`);
+
+      let sidecar: Record<string, unknown> = {};
+      try {
+        const raw = await readFile(jsonPath, 'utf-8');
+        sidecar = JSON.parse(raw);
+      } catch {
+        // No sidecar — use defaults
+      }
+
+      buildings.push({
+        id,
         filename: f,
         publicPath: `/map-data/buildings/${f}`,
-      }));
+        name: (sidecar.name as string) || 'Custom Building',
+        beds: (sidecar.beds as number) || 50,
+        metadata: sidecar.metadata || null,
+      });
+    }
 
     return NextResponse.json({ buildings });
   } catch (error) {
