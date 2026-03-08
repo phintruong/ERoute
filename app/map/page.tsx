@@ -146,7 +146,7 @@ export default function MapPage() {
   const showTimeline = mode === 'civilian' && (activeRec?.routeGeometry || rec?.routeGeometry);
 
   return (
-    <div className='fixed inset-0 overflow-hidden'>
+    <div className={`fixed inset-0 overflow-hidden ${mapTheme === 'night' ? 'cp-night' : ''}`}>
       <ClearPathMap
         mode={mode}
         cityId={mapCity.id}
