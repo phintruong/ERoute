@@ -38,6 +38,9 @@ export interface VitalsPayload {
   emotionState?: string;
 }
 
+/** Response shape from Presage analyze API */
+export type PresageVitals = { hr: number; rr: number; stress: number };
+
 export interface SymptomsPayload {
   chestPain: boolean;
   shortnessOfBreath: boolean;

@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { VitalsPayload } from '@/lib/clearpath/types';
+import type { PresageVitals } from '@/lib/clearpath/types';
 
-type CaptureState = 'initializing' | 'capturing' | 'manualFallback' | 'complete';
+const CAPTURE_DURATION_SECONDS = 10; // Real rPPG needs ~10–15s minimum for accuracy.
+const CAPTURE_INTERVAL_MS = 300; // 250–400ms for frame sampling
+const CANVAS_WIDTH = 640;
+const CANVAS_HEIGHT = 480;
+const MAX_FRAMES = 40;
+const PRESAGE_FETCH_TIMEOUT_MS = 20_000;
+
+type CaptureState = 'initializing' | 'capturing' | 'analyzing' | 'manualFallback' | 'complete';
 
 interface VitalsCaptureProps {
   onComplete: (vitals: VitalsPayload) => void;
@@ -33,7 +41,6 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastLiveRef = useRef({ hr: 75, rr: 16, stress: 0.3 });
 
   const switchToManualFallback = useCallback((message: string) => {
     setFallbackMessage(message);
@@ -53,7 +60,6 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
     setLiveHeartRate(null);
     setLiveRespiratoryRate(null);
     setLiveStressIndex(null);
-    lastLiveRef.current = { hr: 75, rr: 16, stress: 0.3 };
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -62,34 +68,84 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
       streamRef.current = stream;
       setCaptureState('capturing');
 
-      let elapsed = 0;
-      intervalRef.current = setInterval(() => {
-        elapsed += 1;
-        const hr = 60 + Math.floor(Math.random() * 40);
-        const rr = 12 + Math.floor(Math.random() * 10);
-        const stress = Math.round((0.2 + Math.random() * 0.6) * 100) / 100;
-        lastLiveRef.current = { hr, rr, stress };
-        setProgress((elapsed / 30) * 100);
-        setLiveHeartRate(hr);
-        setLiveRespiratoryRate(rr);
-        setLiveStressIndex(stress);
+      const frames: string[] = [];
+      const canvas = document.createElement('canvas');
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        switchToManualFallback('Could not create capture context.');
+        return;
+      }
 
-        if (elapsed >= 30) {
+      const startTime = Date.now();
+      intervalRef.current = setInterval(() => {
+        const video = videoRef.current;
+        if (!video || video.readyState < 2) return;
+
+        const elapsedSec = (Date.now() - startTime) / 1000;
+        if (frames.length < MAX_FRAMES) {
+          ctx.drawImage(video, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          frames.push(dataUrl);
+        }
+        const progressPct = Math.min(100, (elapsedSec / CAPTURE_DURATION_SECONDS) * 100);
+        setProgress(progressPct);
+
+        if (elapsedSec >= CAPTURE_DURATION_SECONDS) {
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
-          setCaptureState('complete');
           stream.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
-          const { hr: finalHr, rr: finalRr, stress: finalStress } = lastLiveRef.current;
-          onComplete({
-            heartRate: clampHeartRate(finalHr),
-            respiratoryRate: clampRespiratoryRate(finalRr),
-            stressIndex: clampStressIndex(finalStress),
-          });
+
+          if (frames.length === 0) {
+            switchToManualFallback('No frames captured. Please try again.');
+            return;
+          }
+
+          setCaptureState('analyzing');
+          setProgress(100);
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), PRESAGE_FETCH_TIMEOUT_MS);
+
+          fetch('/api/presage/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frames }),
+            signal: controller.signal,
+          })
+            .then((res) => {
+              clearTimeout(timeoutId);
+              if (!res.ok) {
+                return res.json().then((j) => Promise.reject(new Error((j as { error?: string })?.error ?? res.statusText)));
+              }
+              return res.json() as Promise<PresageVitals>;
+            })
+            .then((vitals: PresageVitals) => {
+              const hr = clampHeartRate(vitals.hr);
+              const rr = clampRespiratoryRate(vitals.rr);
+              const stress = clampStressIndex(vitals.stress);
+              setLiveHeartRate(hr);
+              setLiveRespiratoryRate(rr);
+              setLiveStressIndex(stress);
+              setCaptureState('complete');
+              onComplete({
+                heartRate: hr,
+                respiratoryRate: rr,
+                stressIndex: stress,
+              });
+            })
+            .catch(() => {
+              clearTimeout(timeoutId);
+              switchToManualFallback('Face analysis failed. Please enter vitals manually.');
+            });
         }
-      }, 1000);
+      }, CAPTURE_INTERVAL_MS);
     } catch {
       switchToManualFallback('Camera unavailable. Please enter vitals manually.');
     }
@@ -201,15 +257,17 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
     );
   }
 
-  if (captureState === 'capturing') {
+  if (captureState === 'capturing' || captureState === 'analyzing') {
     return (
       <div className="fixed inset-0 z-9999 bg-black/90 backdrop-blur-sm flex items-center justify-center">
         <div className="flex flex-col items-center gap-6 w-full max-w-xl px-6">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-            Scanning Vitals
+            {captureState === 'analyzing' ? 'Analyzing…' : 'Scanning Vitals'}
           </h3>
           <p className="text-xs text-white/60 -mt-4">
-            Look directly at the camera and hold still
+            {captureState === 'analyzing'
+              ? 'Please wait'
+              : 'Look directly at the camera and hold still'}
           </p>
           <div className="relative rounded-2xl overflow-hidden bg-black w-full aspect-4/3 shadow-2xl ring-2 ring-white/10">
             <video
@@ -263,13 +321,13 @@ export default function VitalsCapture({ onComplete, onSkip }: VitalsCaptureProps
         Vitals Capture
       </h3>
       <p className="text-[11px] text-slate-500">
-        Use your camera for a 30-second measurement, or enter vitals manually.
+        Use your camera for a {CAPTURE_DURATION_SECONDS}-second measurement, or enter vitals manually.
       </p>
       <button
         onClick={startCameraCapture}
         className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold uppercase"
       >
-        Start 30s Capture
+        Start {CAPTURE_DURATION_SECONDS}s Capture
       </button>
       <button
         onClick={() => switchToManualFallback('Enter vitals manually.')}
