@@ -38,6 +38,7 @@ interface ClearPathMapProps {
   trafficPrediction?: TimelinePrediction | null;
   trafficDragging?: boolean;
   selectedBlueprint?: Blueprint | null;
+  mapStyle?: string;
 }
 
 const CONGESTION_COLORS: Record<string, string> = {
@@ -97,6 +98,7 @@ export default function ClearPathMap({
   trafficPrediction,
   trafficDragging,
   selectedBlueprint,
+  mapStyle = 'mapbox://styles/mapbox/navigation-night-v1',
 }: ClearPathMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -158,6 +160,20 @@ export default function ClearPathMap({
       setMapReady(false);
     };
   }, []);
+
+  // Switch styles when mapStyle changes (skip initial render — constructor already set the style)
+  const prevStyleRef = useRef(mapStyle);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mapStyle === prevStyleRef.current) return;
+    prevStyleRef.current = mapStyle;
+    map.setStyle(mapStyle);
+    setMapReady(false);
+    map.once('style.load', () => {
+      setMapReady(true);
+      setMapInstance(map);
+    });
+  }, [mapStyle]);
 
   useEffect(() => {
     async function fetchData() {

@@ -11,6 +11,8 @@ export interface CreateMapOptions {
   bearing?: number;
   /** When false, do not add the global composite "3d-buildings" layer. Default true. */
   addGlobalBuildings?: boolean;
+  /** Mapbox style URL. Default: dark-v11. */
+  style?: string;
 }
 
 /**
@@ -69,11 +71,12 @@ export function createMapboxMap(options: CreateMapOptions): mapboxgl.Map {
     pitch = 45,
     bearing = -17.6,
     addGlobalBuildings = true,
+    style = 'mapbox://styles/mapbox/dark-v11',
   } = options;
 
   const map = new mapboxgl.Map({
     container,
-    style: 'mapbox://styles/mapbox/dark-v11',
+    style,
     center,
     zoom,
     pitch,
@@ -84,6 +87,18 @@ export function createMapboxMap(options: CreateMapOptions): mapboxgl.Map {
 
   map.on('load', () => {
     hideStreetNamesAndMinorRoads(map);
+
+    // Add 3D terrain for realistic elevation
+    if (!map.getSource('mapbox-dem')) {
+      map.addSource('mapbox-dem', {
+        type: 'raster-dem',
+        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+        tileSize: 512,
+        maxzoom: 14,
+      });
+    }
+    map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+
     if (addGlobalBuildings) {
       const labelLayerId = getFirstSymbolLayerId(map);
       map.addLayer(

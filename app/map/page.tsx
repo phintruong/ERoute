@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ClearPathMap from '@/components/clearpath/ClearPathMap';
 import ModeToggle from '@/components/clearpath/ModeToggle';
+import DayNightToggle from '@/components/clearpath/DayNightToggle';
 import CitySelector from '@/components/clearpath/CitySelector';
 import GovernmentSidebar from '@/components/clearpath/government/GovernmentSidebar';
 import CivilianPanel from '@/components/clearpath/civilian/CivilianPanel';
@@ -26,6 +27,10 @@ export default function MapPage() {
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
   const [customBlueprints, setCustomBlueprints] = useState<Blueprint[]>([]);
   const [importedBlueprint, setImportedBlueprint] = useState<Blueprint | null>(null);
+  const [isDark, setIsDark] = useState(true);
+  const mapStyle = isDark
+    ? 'mapbox://styles/mapbox/navigation-night-v1'
+    : 'mapbox://styles/mapbox/satellite-streets-v12';
 
   // Handle buildingId query param from editor export
   useEffect(() => {
@@ -151,6 +156,7 @@ export default function MapPage() {
         trafficPrediction={trafficPrediction}
         trafficDragging={isTimelineDragging}
         selectedBlueprint={selectedBlueprint}
+        mapStyle={mapStyle}
       />
       <div className='absolute top-0 left-0 w-md z-10 flex flex-col gap-3 p-4 max-h-screen overflow-y-auto'>
         <Link
@@ -164,11 +170,14 @@ export default function MapPage() {
         {!searchParams.get('mode') && (
           <ModeToggle mode={mode} onChange={handleModeChange} />
         )}
-        <CitySelector
-          cities={CITIES}
-          currentCityId={selectedCity.id}
-          onCityChange={handleCityChange}
-        />
+        <div className="flex items-center gap-2">
+          <CitySelector
+            cities={CITIES}
+            currentCityId={selectedCity.id}
+            onCityChange={handleCityChange}
+          />
+          <DayNightToggle isDark={isDark} onToggle={() => setIsDark((d) => !d)} />
+        </div>
         <div className='flex-1 min-h-0'>
           {mode === 'government' ? (
             <GovernmentSidebar
