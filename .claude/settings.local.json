@@ -30,7 +30,8 @@
       "WebFetch(domain:docs.physiology.presagetech.com)",
       "WebFetch(domain:physiology.presagetech.com)",
       "WebFetch(domain:github.com)",
-      "Bash(find /Users/notjackl3/Desktop/CODING/HackCanada/lib/clearpath -type f -name \"*.ts\" -exec wc -l {} +)"
+      "Bash(find /Users/notjackl3/Desktop/CODING/HackCanada/lib/clearpath -type f -name \"*.ts\" -exec wc -l {} +)",
+      "Bash(MONGODB_URI=\"mongodb+srv://dhanikabotejue_db_user:fyp80NeakQEfZFEp@hack-canada.wl3llpo.mongodb.net/\" npx tsx scripts/seedHospitals.ts)"
     ],
     "additionalDirectories": [
       "c:\\Users\\phine\\OneDrive\\Laptop\\HACKATHON\\qhacks\\qhacks\\public\\sounds",
