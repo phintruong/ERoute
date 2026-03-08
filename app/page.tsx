@@ -278,7 +278,7 @@ export default function Landing() {
               step: 'Step 1',
               title: 'See Every ER at a Glance',
               content:
-                "A live 3D map of Ontario's emergency rooms. Congestion circles show real-time occupancy — instantly see which ERs are overwhelmed and which have capacity.",
+                "A live 3D map of Ontario's emergency rooms. Congestion circles show real-time occupancy. Instantly see which ERs are overwhelmed and which have capacity.",
               image: '/carousel/busy-hospital-corridor-stockcake.jpg',
             },
             {
@@ -292,7 +292,7 @@ export default function Landing() {
               step: 'Step 3',
               title: 'Get Routed to the Right ER',
               content:
-                "Answer a few triage questions and get a severity-based recommendation — nearest hospital for emergencies, least congested for non-urgent visits.",
+                "Answer a few triage questions and get a severity-based recommendation. Nearest hospital for emergencies, least congested for non-urgent visits.",
               image: '/carousel/istockphoto-600073876-612x612.jpg',
             },
           ]}
