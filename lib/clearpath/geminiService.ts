@@ -1,10 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { VitalsPayload, SymptomsPayload, TriageResponse } from './types';
 
 const VALID_SEVERITIES: Array<TriageResponse['severity']> = ['critical', 'urgent', 'non-urgent'];
 const MAX_REASONING_LENGTH = 200;
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 
 const SYSTEM_PROMPT = `You are a Canadian emergency triage classifier. You are not a doctor.
 Given vitals and symptoms classify urgency as one of: critical | urgent | non-urgent
@@ -58,7 +56,7 @@ function extractJSONString(text: string): string {
 }
 
 /**
- * Parse and validate Gemini JSON response. Throws GeminiTriageError if invalid.
+ * Parse and validate model JSON response. Throws GeminiTriageError if invalid.
  */
 export function safeParseGeminiJSON(text: string): TriageResponse {
   const raw = extractJSONString(text);
@@ -102,32 +100,32 @@ export async function classifyTriage(
   vitals: VitalsPayload,
   symptoms: SymptomsPayload
 ): Promise<TriageResponse> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new GeminiTriageError('GEMINI_API_KEY is not set', 'API_ERROR');
+    throw new GeminiTriageError('OPENAI_API_KEY is not set', 'API_ERROR');
   }
 
-  const modelId = process.env.GEMINI_MODEL ?? 'gemini-3-flash-preview';
-  const model = genAI.getGenerativeModel({
-    model: modelId,
-    generationConfig: {
-      temperature: 0.3,
-    },
-  });
+  const openai = new OpenAI({ apiKey });
+  const modelId = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
 
   const userContent =
     `Vitals: HR=${vitals.heartRate} RR=${vitals.respiratoryRate} Stress=${vitals.stressIndex}\n` +
     `Symptoms: ${JSON.stringify(symptoms)}`;
 
-  const fullPrompt = `${SYSTEM_PROMPT}\n\n${userContent}`;
-
   let lastError: GeminiTriageError | null = null;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const result = await model.generateContent(fullPrompt);
-      const response = result.response;
-      const text = response.text();
+      const result = await openai.chat.completions.create({
+        model: modelId,
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
+      });
+
+      const text = result.choices[0]?.message?.content;
 
       if (!text) {
         throw new GeminiTriageError('Empty response from model', 'INVALID_JSON');
@@ -143,7 +141,7 @@ export async function classifyTriage(
         throw err;
       }
       throw new GeminiTriageError(
-        err instanceof Error ? err.message : 'Gemini API request failed',
+        err instanceof Error ? err.message : 'OpenAI API request failed',
         'API_ERROR'
       );
     }

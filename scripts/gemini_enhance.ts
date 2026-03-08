@@ -6,12 +6,11 @@ import path from 'path';
 // Load env vars
 dotenv.config({ path: '.env' });
 
-// They have OPENAI_API_KEY in .env.local, maybe GEMINI_API_KEY too
-const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+const apiKey = process.env.OPENAI_API_KEY;
 
 async function main() {
   if (!apiKey) {
-    console.error("No API key found. Please set GEMINI_API_KEY or OPENAI_API_KEY in .env.local");
+    console.error("No API key found. Please set OPENAI_API_KEY in .env.local");
     return;
   }
 
