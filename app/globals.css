@@ -850,7 +850,7 @@ body {
     top: 1rem;
     left: 1rem;
     z-index: 20;
-    width: min(34vw, 540px);
+    width: min(30vw, 480px);
     height: calc(100vh - 2rem);
     max-height: calc(100vh - 2rem);
     display: flex;
@@ -861,7 +861,6 @@ body {
   .cp-back-btn {
     display: inline-flex;
     align-items: center;
-    align-self: flex-start;
     gap: 0.5rem;
     padding: 0.4rem 0.75rem 0.4rem 0.45rem;
     border-radius: 9999px;
@@ -949,6 +948,7 @@ body {
 
   .cp-theme-toggle {
     position: relative;
+    flex-shrink: 0;
     width: 168px;
     height: 44px;
     border-radius: 9999px;
@@ -1089,6 +1089,10 @@ body {
   }
 
   /* Government sidebar internals still use light utility classes */
+  .gov-panel {
+    width: 100%;
+  }
+
   .cp-night .gov-panel {
     background: rgba(15, 23, 42, 0.88);
     border-color: rgba(71, 85, 105, 0.62);

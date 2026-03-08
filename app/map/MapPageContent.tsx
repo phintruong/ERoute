@@ -183,29 +183,29 @@ export default function MapPageContent() {
         mapStyle={mapStyle}
       />
       <div className='cp-map-rail'>
-        <Link
-          href="/"
-          className="cp-back-btn"
-          aria-label="Back to home"
-        >
-          <span className="cp-back-btn__icon" aria-hidden>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </span>
-          <span>Back to Home</span>
-        </Link>
+        <div className="flex items-center justify-between gap-2 w-full">
+          <Link
+            href="/"
+            className="cp-back-btn"
+            aria-label="Back to home"
+          >
+            <span className="cp-back-btn__icon" aria-hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </span>
+            <span>Back to Home</span>
+          </Link>
+          <DayNightToggle theme={mapTheme} onChange={setMapTheme} />
+        </div>
         {!searchParams.get('mode') && (
           <ModeToggle mode={mode} onChange={handleModeChange} />
         )}
-        <div className="cp-map-controls-row">
-          <CitySelector
-            cities={CITIES}
-            currentCityId={selectedCity?.id ?? ''}
-            onCityChange={handleCityChange}
-          />
-          <DayNightToggle theme={mapTheme} onChange={setMapTheme} />
-        </div>
+        <CitySelector
+          cities={CITIES}
+          currentCityId={selectedCity?.id ?? ''}
+          onCityChange={handleCityChange}
+        />
         <div className='cp-map-panel-wrap'>
           {mode === 'government' ? (
             <GovernmentSidebar
