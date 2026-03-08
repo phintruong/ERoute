@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { BuildingWrapper } from './BuildingWrapper';
@@ -10,6 +10,47 @@ import { FloorPlanView } from '@/components/editor/FloorPlan/FloorPlanView';
 
 const SNAP_THRESHOLD = 5; // Units within which snapping activates
 
+/**
+ * Animates the camera and orbit target to smoothly transition
+ * to the selected floor's actual height.
+ */
+function FloorCameraAnimator({
+  floorIndex,
+  floorHeight,
+  controlsRef,
+}: {
+  floorIndex: number;
+  floorHeight: number;
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  const { camera } = useThree();
+  const targetY = floorIndex * floorHeight;
+  const initialized = useRef(false);
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    // On first frame only, set a reasonable starting position
+    if (!initialized.current) {
+      initialized.current = true;
+      camera.position.set(20, targetY + 15, 20);
+      controls.target.set(0, targetY, 0);
+      controls.update();
+      return;
+    }
+
+    // Smoothly lerp only the orbit target Y to the selected floor height
+    // Camera position is NOT forced — user can freely orbit/pan/zoom
+    const lerpFactor = 0.06;
+    const newTargetY = THREE.MathUtils.lerp(controls.target.y, targetY, lerpFactor);
+    controls.target.y = newTargetY;
+    controls.update();
+  });
+
+  return null;
+}
+
 interface SceneContentProps {
   sceneRef?: React.MutableRefObject<THREE.Scene | null>;
 }
@@ -19,6 +60,7 @@ function SceneContent({ sceneRef }: SceneContentProps) {
   const { scene } = useThree();
   const { play: playSound } = useBuildingSound();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
+  const floorPlanControlsRef = useRef<any>(null);
   const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number; z: number } | null>(null);
   const [isSnapped, setIsSnapped] = useState(false);
 
@@ -28,6 +70,14 @@ function SceneContent({ sceneRef }: SceneContentProps) {
       sceneRef.current = scene;
     }
   }, [scene, sceneRef]);
+
+  // Reset camera animator on floor change
+  const prevFloorRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (floorPlanFloor !== prevFloorRef.current) {
+      prevFloorRef.current = floorPlanFloor;
+    }
+  }, [floorPlanFloor]);
 
   // Handle space key to deselect all buildings
   useEffect(() => {
@@ -171,26 +221,48 @@ function SceneContent({ sceneRef }: SceneContentProps) {
 
   return (
     <>
-      {/* Lighting - always present */}
-      <ambientLight intensity={0.8} />
-      <hemisphereLight args={[0xffffff, 0xffffff, 0.5]} />
-      <pointLight position={[50, 50, 50]} intensity={0.3} />
-      <pointLight position={[-50, 50, 50]} intensity={0.3} />
-      <pointLight position={[50, 50, -50]} intensity={0.3} />
-      <pointLight position={[-50, 50, -50]} intensity={0.3} />
+      {/* Lighting - brighter for clearer floor plan views */}
+      <ambientLight intensity={1.2} />
+      <hemisphereLight args={[0xffffff, 0xffffff, 0.7]} />
+      <pointLight position={[50, 50, 50]} intensity={0.5} />
+      <pointLight position={[-50, 50, 50]} intensity={0.5} />
+      <pointLight position={[50, 50, -50]} intensity={0.5} />
+      <pointLight position={[-50, 50, -50]} intensity={0.5} />
 
       {isFloorPlanMode ? (
         <>
-          {/* Floor plan rendering */}
-          <FloorPlanView floorIndex={floorPlanFloor!} spec={selectedBuilding!.spec} />
+          {/* Render ghost floors first (renderOrder 0), then selected floor on top (renderOrder 1) */}
+          {Array.from({ length: selectedBuilding!.spec.numberOfFloors }, (_, i) =>
+            i !== floorPlanFloor ? (
+              <FloorPlanView
+                key={i}
+                floorIndex={i}
+                spec={selectedBuilding!.spec}
+                opacity={0.06}
+              />
+            ) : null
+          )}
+          <FloorPlanView
+            key={`selected-${floorPlanFloor}`}
+            floorIndex={floorPlanFloor!}
+            spec={selectedBuilding!.spec}
+            opacity={1}
+          />
 
-          {/* Full 3D orbit controls for floor plan */}
+          {/* Camera animator that transitions to floor height */}
+          <FloorCameraAnimator
+            floorIndex={floorPlanFloor!}
+            floorHeight={selectedBuilding!.spec.floorHeight}
+            controlsRef={floorPlanControlsRef}
+          />
+
+          {/* Full 3D orbit controls for floor plan — no angle restriction */}
           <OrbitControls
+            ref={floorPlanControlsRef}
             enableDamping
             dampingFactor={0.05}
             minDistance={5}
             maxDistance={150}
-            maxPolarAngle={Math.PI / 2.05}
           />
         </>
       ) : (

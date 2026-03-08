@@ -38,11 +38,19 @@ export interface BuildingAllocation {
 
 const WALL_THICKNESS = 0.15;
 const CORRIDOR_WIDTH = 2.0;
+const ROOM_GAP = 0.8;  // passage width between rooms
 
 interface RoomRequest {
   roomDef: RoomTypeDefinition;
   remaining: number;
-  countersPlaced: number; // tracks how many have been placed so far (for labeling)
+  countersPlaced: number;
+}
+
+/**
+ * Picks a deterministic variant index based on room counter and floor index.
+ */
+function pickVariant(countersPlaced: number, floorIndex: number, variantCount: number): number {
+  return (countersPlaced + floorIndex * 3) % variantCount;
 }
 
 /**
@@ -75,33 +83,28 @@ function packFloor(
     let cursorZ = zone.startZ;
     let rowMaxDepth = 0;
 
-    // Iterate through room types in priority order (already sorted)
     for (const req of requests) {
-      // Skip ground-floor-only rooms on upper floors
       if (req.roomDef.groundFloorOnly && !isGroundFloor) continue;
-      // Skip non-ground-floor-only rooms if we're on ground floor and still have ground-only rooms to place
-      // (No, we should place all eligible types - priority ordering handles this)
 
       while (req.remaining > 0) {
         const roomW = req.roomDef.unitWidth;
         const roomD = req.roomDef.unitDepth;
 
         // Check if room fits in current row
-        if (cursorX + roomW + WALL_THICKNESS > floorWidth - WALL_THICKNESS) {
-          // Move to next row
+        if (cursorX + roomW > floorWidth - WALL_THICKNESS) {
           cursorX = WALL_THICKNESS;
-          cursorZ += rowMaxDepth + WALL_THICKNESS;
+          cursorZ += rowMaxDepth + ROOM_GAP;
           rowMaxDepth = 0;
         }
 
         // Check if room fits in this zone vertically
         if (cursorZ + roomD > zone.startZ + zone.maxDepth) {
-          break; // Zone is full for this room type, try next zone
+          break;
         }
 
         // Check if room fits horizontally
-        if (cursorX + roomW + WALL_THICKNESS > floorWidth - WALL_THICKNESS) {
-          break; // Can't fit even at start of row
+        if (cursorX + roomW > floorWidth - WALL_THICKNESS) {
+          break;
         }
 
         // Place the room
@@ -111,7 +114,12 @@ function packFloor(
         req.countersPlaced++;
         const roomLabel = `${req.roomDef.shortLabel} #${req.countersPlaced}`;
 
-        const furniture: PlacedFurniture[] = req.roomDef.furniture.map((item) => ({
+        // Pick a furniture variant
+        const variantCount = req.roomDef.furnitureVariants.length;
+        const variantIdx = pickVariant(req.countersPlaced, floorIndex, variantCount);
+        const selectedFurniture = req.roomDef.furnitureVariants[variantIdx] ?? req.roomDef.furnitureVariants[0];
+
+        const furniture: PlacedFurniture[] = selectedFurniture.map((item) => ({
           x: roomX + item.relativeX,
           z: roomZ + item.relativeZ,
           width: item.width,
@@ -134,7 +142,7 @@ function packFloor(
         });
 
         req.remaining--;
-        cursorX += roomW + WALL_THICKNESS;
+        cursorX += roomW + ROOM_GAP;
         rowMaxDepth = Math.max(rowMaxDepth, roomD);
       }
     }
@@ -145,8 +153,10 @@ function packFloor(
 
 /**
  * Generates a complete building allocation across all floors.
- * Fills bottom floors first. Ground-floor-only rooms (ambulance, ER, trauma)
- * are placed on floor 0 only. Rooms are packed by priority order.
+ * Fills each floor completely (bottom to top) before moving to the next.
+ * Ground-floor-only rooms (ambulance, ER, trauma) are placed on floor 0 first,
+ * then remaining space on floor 0 is filled with non-ground rooms before
+ * moving up to floor 1, 2, etc.
  */
 export function generateBuildingAllocation(
   spec: BuildingSpecification
@@ -155,7 +165,7 @@ export function generateBuildingAllocation(
   const floorDepth = spec.depth;
   const numberOfFloors = spec.numberOfFloors;
 
-  // Build room requests sorted by priority
+  // Build all room requests sorted by priority
   const requests: RoomRequest[] = ROOM_TYPES
     .filter((rt) => rt.getCount(spec) > 0)
     .sort((a, b) => a.priority - b.priority)
@@ -165,13 +175,16 @@ export function generateBuildingAllocation(
       countersPlaced: 0,
     }));
 
-  const floors: FloorLayout[] = [];
+  // Initialize all floors
+  const floors: FloorLayout[] = Array.from({ length: numberOfFloors }, (_, i) => ({
+    floorIndex: i,
+    rooms: [],
+  }));
 
-  for (let floorIndex = 0; floorIndex < numberOfFloors; floorIndex++) {
-    const isGroundFloor = floorIndex === 0;
-    const rooms = packFloor(floorIndex, floorWidth, floorDepth, requests, isGroundFloor);
-
-    floors.push({ floorIndex, rooms });
+  // Fill floors bottom to top — each floor is fully packed before moving up
+  for (let fi = 0; fi < numberOfFloors; fi++) {
+    const isGroundFloor = fi === 0;
+    floors[fi].rooms = packFloor(fi, floorWidth, floorDepth, requests, isGroundFloor);
   }
 
   return {

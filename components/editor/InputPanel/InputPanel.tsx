@@ -4,14 +4,16 @@ import { TransformForm } from './TransformForm';
 import { DimensionsForm } from './DimensionsForm';
 import { WindowForm } from './WindowForm';
 import { HospitalForm } from './HospitalForm';
+import { TextureSelector } from './TextureSelector';
 import { BuildingList } from './BuildingList';
 import { DEFAULT_BUILDING_SPEC } from '@/lib/editor/types/buildingSpec';
 
-type SettingsTab = 'transform' | 'dimensions' | 'windows' | 'hospital';
+type SettingsTab = 'transform' | 'dimensions' | 'textures' | 'windows' | 'hospital';
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: 'transform', label: 'Transform' },
   { id: 'dimensions', label: 'Dimensions' },
+  { id: 'textures', label: 'Textures' },
   { id: 'windows', label: 'Windows' },
   { id: 'hospital', label: 'Hospital' },
 ];
@@ -101,6 +103,9 @@ export function InputPanel() {
                   onUpdate={handleUpdate}
                   buildingId={selectedBuilding.id}
                 />
+              )}
+              {activeTab === 'textures' && (
+                <TextureSelector spec={selectedBuilding.spec} onUpdate={handleUpdate} />
               )}
               {activeTab === 'windows' && (
                 <WindowForm spec={selectedBuilding.spec} onUpdate={handleUpdate} />

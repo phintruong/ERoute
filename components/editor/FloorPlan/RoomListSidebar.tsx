@@ -9,7 +9,7 @@ import type { RoomTypeId } from '@/lib/editor/floorplan/roomTypes';
 // Color dot for each room type
 const ROOM_TYPE_COLORS: Record<RoomTypeId, string> = {
   ambulance_bay: '#ef4444',
-  emergency_bay: '#f97316',
+  emergency_room: '#f97316',
   trauma_room: '#dc2626',
   operating_room: '#3b82f6',
   patient_room: '#60a5fa',
