@@ -11,6 +11,7 @@ import LandmarksLayer from './LandmarksLayer';
 import TrafficLayer from './government/TrafficLayer';
 import GLBModelLayer from './government/GLBModelLayer';
 import SuitableParcelsLayer from './government/SuitableParcelsLayer';
+import CoverageHeatmapLayer from './government/CoverageHeatmapLayer';
 import type { CityConfig } from '@/lib/map-3d/types';
 import type { TimelinePrediction } from '@/lib/clearpath/trafficPrediction';
 import type { Blueprint, ProposedBuilding } from '@/lib/clearpath/blueprints';
@@ -541,6 +542,7 @@ export default function ClearPathMap({
           {mode === 'government' && (
             <>
               <TrafficLayer map={mapInstance} />
+              <CoverageHeatmapLayer map={mapInstance} hospitals={hospitals} congestion={congestion} />
               {selectedBlueprint && (
                 <SuitableParcelsLayer
                   map={mapInstance}

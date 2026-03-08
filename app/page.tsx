@@ -1,182 +1,359 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useRef } from 'react';
+import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { FeatureSteps } from '@/components/ui/feature-section';
 
+const MotionLink = motion.create(Link);
+const ease = [0.22, 1, 0.36, 1] as const;
+
+function FadeUp({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={{ opacity: 0, y: 32 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 32 }}
+      transition={{ duration: 0.7, ease, delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+const staggerItem = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
+};
+
+const showcaseFeatures = [
+  {
+    label: 'Live Congestion',
+    title: 'Real-time ER occupancy',
+    description: 'Color-coded circles on every hospital show live congestion — green means capacity, red means overwhelmed.',
+  },
+  {
+    label: 'Smart Routing',
+    title: 'AI-powered triage & routing',
+    description: 'Enter symptoms, get a severity score, and see the optimal hospital factoring in drive time, wait time, and specialty.',
+  },
+  {
+    label: 'ER Simulation',
+    title: 'Plan new ER placement',
+    description: 'Drop a proposed ER, set capacity, run a Voronoi simulation — watch patient flow redistribute across the network.',
+  },
+];
+
 export default function Landing() {
+  const showcaseRef = useRef<HTMLDivElement>(null);
+
   const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
+  const heroY = useTransform(heroProgress, [0, 1], ['0%', '30%']);
+  const heroOpacity = useTransform(heroProgress, [0, 0.8], [1, 0]);
 
-  // Track scroll progress for the entire page
-  const { scrollYProgress } = useScroll();
-
-  // Transform values based on scroll
-  // Padding: 1.25rem -> 0rem (first 30% of scroll)
-  const padding = useTransform(scrollYProgress, [0, 0.3], ['1.25rem', '0rem']);
-
-  // Scale/Zoom: 1 -> 2.5 (zoom in significantly, first 50% of scroll)
-  const scale = useTransform(scrollYProgress, [0, 0.5], [1, 2.5]);
-
-  // White overlay opacity: fade in 0→1 then quickly fade out 1→0
-  const overlayOpacity = useTransform(scrollYProgress, [0, 0.45, 5], [0, 1, 0]);
-
-  // Content: appear a bit after white overlay is full (55% to 72% of scroll), then stick and settle
-  const contentOpacity = useTransform(scrollYProgress, [0.55, 0.72], [0, 1]);
-
-  // Content translateY: "come down" into place as it fades in
-  const contentY = useTransform(scrollYProgress, [0.55, 0.72], [24, 0]);
-
-  useEffect(() => {
-    const hero = heroRef.current;
-    if (!hero) return;
-
-    const handleMove = (e: MouseEvent) => {
-      const rect = hero.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width - 0.5;
-      const y = (e.clientY - rect.top) / rect.height - 0.5;
-      hero.style.setProperty('--mx', `${x * 18}px`);
-      hero.style.setProperty('--my', `${y * 12}px`);
-    };
-
-    hero.addEventListener('mousemove', handleMove);
-    return () => hero.removeEventListener('mousemove', handleMove);
-  }, []);
 
   return (
     <div className="lp">
-      {/* Top buttons */}
-      <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-5">
-        <div className="inline-flex gap-1.5 rounded-full border border-sky-200/80 bg-white/95 p-2 shadow-lg backdrop-blur-sm">
-          <Link
-            href="/map?mode=government"
-            className="min-w-[7.5rem] text-center justify-center px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-full shadow-md hover:shadow-lg transition-all"
-          >
-            Government
-          </Link>
-          <Link
-            href="/map?mode=civilian"
-            className="min-w-[7.5rem] text-center justify-center px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-white bg-sky-500 hover:bg-sky-600 rounded-full shadow-md hover:shadow-lg transition-all"
-          >
-            Civilian
-          </Link>
-        </div>
-      </div>
-
-      {/* Spacer so content reaches viewport when overlay is full (progress 0.5) */}
-      <div style={{ height: '150vh' }} />
-
-      {/* ───── HERO ───── */}
-      <motion.section
-        className="lp-hero-wrap-fixed"
-        style={{ padding }}
+      {/* ───── TOP NAV ───── */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-5"
+        initial={{ opacity: 0, y: -24, filter: 'blur(8px)' }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ duration: 0.7, delay: 0.3, ease }}
       >
-        <motion.div className="lp-hero" ref={heroRef} style={{ scale }}>
+        <motion.div
+          className="lp-nav-pill"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div variants={staggerItem}>
+            <Link href="/" className="lp-nav-logo">
+              <img src="/logo.png" alt="ERoute" className="lp-nav-logo-img" />
+            </Link>
+          </motion.div>
+          <motion.div className="lp-nav-divider" variants={staggerItem} />
+          <motion.div variants={staggerItem}>
+            <MotionLink
+              href="/map?mode=government"
+              className="lp-nav-btn lp-nav-btn--secondary"
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
+              Government
+            </MotionLink>
+          </motion.div>
+          <motion.div variants={staggerItem}>
+            <MotionLink
+              href="/map?mode=civilian"
+              className="lp-nav-btn lp-nav-btn--primary"
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Find an ER
+            </MotionLink>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* ───── HERO (fixed background, parallax) ───── */}
+      <section ref={heroRef} className="lp-hero-section">
+        <motion.div className="lp-hero-bg" style={{ y: heroY, opacity: heroOpacity }}>
           <img src="/thumb.jpg" alt="" className="lp-hero-img" draggable={false} />
           <div className="lp-hero-vignette" />
+        </motion.div>
 
-          <h1 className="lp-hero-title">ERoute.</h1>
-
-          <Link href="/map" className="lp-hero-cta">
-            See the Map&ensp;&rarr;
-          </Link>
-
-          {/* White overlay that fades in - pointer-events: none so it doesn't block button clicks */}
+        <div className="lp-hero-content">
+          <motion.h1
+            className="lp-hero-title"
+            initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.9, delay: 0.4, ease }}
+          >
+            ERoute.
+          </motion.h1>
+          <motion.p
+            className="lp-hero-subtitle"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.7, ease }}
+          >
+            Smart ER routing for Ontario
+          </motion.p>
           <motion.div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: '#f0f9ff',
-              opacity: overlayOpacity,
-              zIndex: 10,
-              pointerEvents: 'none',
-            }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.0, ease }}
+          >
+            <MotionLink
+              href="/map"
+              className="lp-hero-cta"
+              whileHover={{ scale: 1.04, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+            >
+              <span>Explore the Map</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </MotionLink>
+          </motion.div>
+        </div>
+
+        <motion.div
+          className="lp-scroll-indicator"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 0.8 }}
+        >
+          <motion.div
+            className="lp-scroll-dot"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
           />
         </motion.div>
-      </motion.section>
+      </section>
 
-      {/* Content: sticky so it appears in view as overlay finishes, then normal scroll */}
-      <motion.div
-        className="lp-content-sticky"
-        style={{
-          opacity: contentOpacity,
-          y: contentY,
-          position: 'sticky',
-          top: 0,
-          zIndex: 20,
-          backgroundColor: '#f0f9ff',
-          paddingRight: '1.5rem',
-        }}
-      >
-        {/* ───── STATEMENT ───── */}
-        <section className="lp-statement" style={{ paddingTop: '50rem' }}>
-          <span className="lp-stmt-rule lp-fade" style={{ animationDelay: '0.1s' }} />
+      {/* ───── STATEMENT (scrolls over hero) ───── */}
+      <section className="lp-statement-section">
+        <div className="lp-statement">
+          <FadeUp>
+            <motion.span
+              className="lp-stmt-rule"
+              initial={{ width: 0 }}
+              whileInView={{ width: 48 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease }}
+            />
+          </FadeUp>
 
-          <p className="lp-stmt-small lp-fade" style={{ animationDelay: '0.25s' }}>
-            Every second in an ER matters. Better routing saves lives.
-          </p>
+          <FadeUp delay={0.1}>
+            <p className="lp-stmt-small">
+              4.5 hours. That&apos;s the average ER wait in Ontario.
+            </p>
+          </FadeUp>
 
-          <div className="lp-stmt-block lp-fade" style={{ animationDelay: '0.5s' }}>
-            <h2 className="lp-stmt-line">Canada&apos;s ERs are overwhelmed.</h2>
-            <h2 className="lp-stmt-line">Let&apos;s fix that together.</h2>
-          </div>
+          <FadeUp delay={0.2}>
+            <div className="lp-stmt-block">
+              <h2 className="lp-stmt-line">Canada&apos;s ERs are overwhelmed.</h2>
+              <h2 className="lp-stmt-line">Data can change that.</h2>
+            </div>
+          </FadeUp>
 
-          <p className="lp-stmt-sub lp-fade" style={{ animationDelay: '0.75s' }}>
-            Smarter placement. Faster triage. Shorter waits.
-          </p>
+          <FadeUp delay={0.3}>
+            <p className="lp-stmt-sub">
+              Smarter placement. Faster triage. Shorter waits.
+            </p>
+          </FadeUp>
 
-          <h2 className="lp-stmt-main lp-fade" style={{ animationDelay: '0.95s' }}>
-            See the problem.<br /><span className="lp-stmt-gold">Place the solution.</span>
-          </h2>
+          <FadeUp delay={0.4}>
+            <h2 className="lp-stmt-main">
+              See the problem.<br /><span className="lp-stmt-gold">Place the solution.</span>
+            </h2>
+          </FadeUp>
 
-          <Link
-            href="/map"
-            className="lp-stmt-cta lp-fade"
-            style={{ animationDelay: '1.35s' }}
+          <FadeUp delay={0.5}>
+            <div className="lp-stmt-ctas">
+              <MotionLink
+                href="/map?mode=government"
+                className="lp-stmt-cta lp-stmt-cta--outline"
+                whileHover={{ scale: 1.04, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+                <span>Plan an ER</span>
+              </MotionLink>
+              <MotionLink
+                href="/map?mode=civilian"
+                className="lp-stmt-cta lp-stmt-cta--filled"
+                whileHover={{ scale: 1.04, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+              >
+                <span>Find the Nearest ER</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </MotionLink>
+            </div>
+          </FadeUp>
+        </div>
+      </section>
+
+      {/* ───── UI SHOWCASE (scrollytelling) ───── */}
+      <section ref={showcaseRef} className="lp-showcase">
+        <div className="lp-showcase-sticky">
+          {/* Browser mockup */}
+          <motion.div
+            className="lp-browser"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease }}
           >
-            Open the Map&ensp;&rarr;
-          </Link>
-        </section>
+            <div className="lp-browser-bar">
+              <div className="lp-browser-dots">
+                <span /><span /><span />
+              </div>
+              <div className="lp-browser-url">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>eroute.ca/map</span>
+              </div>
+            </div>
+            <div className="lp-browser-viewport">
+              <iframe
+                src="/map"
+                title="ERoute Map Preview"
+                className="lp-browser-iframe"
+                loading="lazy"
+              />
+              <div className="lp-browser-iframe-overlay" />
+            </div>
+          </motion.div>
 
-        {/* ───── YOUR JOURNEY ───── */}
-        <section className="bg-sky-50" style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)' }}>
-          <FeatureSteps
-            title="How ERoute Works"
-            subtitle="Reducing ER congestion with data, simulation, and smart routing."
-            features={[
-              {
-                step: 'Step 1',
-                title: 'See Every ER at a Glance',
-                content:
-                  "View a live 3D map of Toronto's emergency rooms. Congestion circles show real-time occupancy so you can instantly see which ERs are overwhelmed and which have capacity.",
-                image: '/carousel/busy-hospital-corridor-stockcake.jpg',
-              },
-              {
-                step: 'Step 2',
-                title: 'Place a New ER, Watch Congestion Shift',
-                content:
-                  'In Government mode, drop a proposed ER anywhere on the map, set its capacity, and run a Voronoi simulation to see how patient flow redistributes across the network.',
-                image: '/carousel/NewmanRegional-Health2-600x400.jpg',
-              },
-              {
-                step: 'Step 3',
-                title: 'Get Routed to the Right ER',
-                content:
-                  "In Civilian mode, answer a few triage questions and get a severity-based recommendation — nearest hospital for emergencies, least congested for non-urgent visits.",
-                image: '/carousel/istockphoto-600073876-612x612.jpg',
-              },
-            ]}
-            autoPlayInterval={4000}
-            imageHeight="h-[500px]"
-          />
-        </section>
-        {/* ───── FOOTER ───── */}
+          {/* Scroll-linked feature cards */}
+          <div className="lp-showcase-cards">
+            {showcaseFeatures.map((feat, i) => (
+              <ShowcaseCard
+                key={i}
+                label={feat.label}
+                title={feat.title}
+                description={feat.description}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ───── HOW IT WORKS ───── */}
+      <section className="lp-how-section">
+        <FeatureSteps
+          title="How ERoute Works"
+          subtitle="Reducing ER congestion with data, simulation, and smart routing."
+          features={[
+            {
+              step: 'Step 1',
+              title: 'See Every ER at a Glance',
+              content:
+                "A live 3D map of Ontario's emergency rooms. Congestion circles show real-time occupancy — instantly see which ERs are overwhelmed and which have capacity.",
+              image: '/carousel/busy-hospital-corridor-stockcake.jpg',
+            },
+            {
+              step: 'Step 2',
+              title: 'Simulate New ER Placement',
+              content:
+                'Drop a proposed ER anywhere on the map, set its capacity, and run a Voronoi simulation to see how patient flow redistributes across the network in real time.',
+              image: '/carousel/NewmanRegional-Health2-600x400.jpg',
+            },
+            {
+              step: 'Step 3',
+              title: 'Get Routed to the Right ER',
+              content:
+                "Answer a few triage questions and get a severity-based recommendation — nearest hospital for emergencies, least congested for non-urgent visits.",
+              image: '/carousel/istockphoto-600073876-612x612.jpg',
+            },
+          ]}
+          autoPlayInterval={4000}
+          imageHeight="h-[500px]"
+        />
+      </section>
+
+      {/* ───── FOOTER ───── */}
+      <FadeUp>
         <footer className="lp-footer">
-          <a href="https://github.com/phintruong/HackCanada" target="_blank" rel="noopener noreferrer">
-            Source on GitHub
-          </a>
+          <div className="lp-footer-inner">
+            <span className="lp-footer-brand">ERoute</span>
+            <span className="lp-footer-sep">&middot;</span>
+            <a href="https://github.com/phintruong/HackCanada" target="_blank" rel="noopener noreferrer">
+              Source on GitHub
+            </a>
+            <span className="lp-footer-sep">&middot;</span>
+            <span className="lp-footer-note">Built for Hack Canada 2025</span>
+          </div>
         </footer>
-      </motion.div>
+      </FadeUp>
     </div>
+  );
+}
+
+function ShowcaseCard({
+  label,
+  title,
+  description,
+}: {
+  label: string;
+  title: string;
+  description: string;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(cardRef, { margin: '-30% 0px -30% 0px' });
+
+  return (
+    <motion.div
+      ref={cardRef}
+      className="lp-showcase-card"
+      animate={{
+        opacity: inView ? 1 : 0.3,
+        y: inView ? 0 : 12,
+        scale: inView ? 1 : 0.97,
+      }}
+      transition={{ duration: 0.5, ease }}
+    >
+      <span className="lp-showcase-card-label">{label}</span>
+      <h3 className="lp-showcase-card-title">{title}</h3>
+      <p className="lp-showcase-card-desc">{description}</p>
+    </motion.div>
   );
 }
