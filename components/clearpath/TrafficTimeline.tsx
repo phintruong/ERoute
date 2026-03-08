@@ -241,7 +241,7 @@ export default function TrafficTimeline({
 
           {/* Thumb */}
           <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-white shadow-lg border-2 border-sky-400 transition-left duration-150"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-white shadow-sm border-2 border-slate-300 transition-left duration-150"
             style={{ left: `${thumbPct}%` }}
           />
         </div>

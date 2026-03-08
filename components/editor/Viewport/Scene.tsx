@@ -1,27 +1,68 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { BuildingWrapper } from './BuildingWrapper';
-import { GoldEffects, GoldBurst } from './GoldParticles';
 import { useBuildings } from '@/lib/editor/contexts/BuildingsContext';
 import { DEFAULT_BUILDING_SPEC } from '@/lib/editor/types/buildingSpec';
 import { useBuildingSound } from '@/lib/editor/hooks/useBuildingSound';
+import { FloorPlanView } from '@/components/editor/FloorPlan/FloorPlanView';
 
 const SNAP_THRESHOLD = 5; // Units within which snapping activates
+
+/**
+ * Animates the camera and orbit target to smoothly transition
+ * to the selected floor's actual height.
+ */
+function FloorCameraAnimator({
+  floorIndex,
+  floorHeight,
+  controlsRef,
+}: {
+  floorIndex: number;
+  floorHeight: number;
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  const { camera } = useThree();
+  const targetY = floorIndex * floorHeight;
+  const initialized = useRef(false);
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    // On first frame only, set a reasonable starting position
+    if (!initialized.current) {
+      initialized.current = true;
+      camera.position.set(20, targetY + 15, 20);
+      controls.target.set(0, targetY, 0);
+      controls.update();
+      return;
+    }
+
+    // Smoothly lerp only the orbit target Y to the selected floor height
+    // Camera position is NOT forced — user can freely orbit/pan/zoom
+    const lerpFactor = 0.06;
+    const newTargetY = THREE.MathUtils.lerp(controls.target.y, targetY, lerpFactor);
+    controls.target.y = newTargetY;
+    controls.update();
+  });
+
+  return null;
+}
 
 interface SceneContentProps {
   sceneRef?: React.MutableRefObject<THREE.Scene | null>;
 }
 
 function SceneContent({ sceneRef }: SceneContentProps) {
-  const { buildings, selectedBuildingId, selectBuilding, addBuilding, placementMode, clearSelection } = useBuildings();
+  const { buildings, selectedBuildingId, selectBuilding, addBuilding, placementMode, clearSelection, floorPlanFloor, getSelectedBuilding } = useBuildings();
   const { scene } = useThree();
   const { play: playSound } = useBuildingSound();
   const gridPlaneRef = useRef<THREE.Mesh>(null);
+  const floorPlanControlsRef = useRef<any>(null);
   const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number; z: number } | null>(null);
   const [isSnapped, setIsSnapped] = useState(false);
-  const [burstEffects, setBurstEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
 
   // Sync scene ref
   useEffect(() => {
@@ -29,6 +70,14 @@ function SceneContent({ sceneRef }: SceneContentProps) {
       sceneRef.current = scene;
     }
   }, [scene, sceneRef]);
+
+  // Reset camera animator on floor change
+  const prevFloorRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (floorPlanFloor !== prevFloorRef.current) {
+      prevFloorRef.current = floorPlanFloor;
+    }
+  }, [floorPlanFloor]);
 
   // Handle space key to deselect all buildings
   useEffect(() => {
@@ -161,111 +210,124 @@ function SceneContent({ sceneRef }: SceneContentProps) {
     const point = e.point;
     const { x, y, z } = getSnappedPosition(point.x, point.z);
 
-    // Add burst effect at placement position
-    const buildingHeight = DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors;
-    setBurstEffects(prev => [...prev, {
-      id: Date.now(),
-      position: [x, y + buildingHeight / 2, z] as [number, number, number]
-    }]);
-
     addBuilding({ x, y, z });
     playSound('brick_place');
     setGhostPosition(null);
     setIsSnapped(false);
   };
 
-  const removeBurstEffect = useCallback((id: number) => {
-    setBurstEffects(prev => prev.filter(effect => effect.id !== id));
-  }, []);
+  const selectedBuilding = getSelectedBuilding();
+  const isFloorPlanMode = floorPlanFloor !== null && !!selectedBuilding;
 
   return (
     <>
-      {/* Even lighting from all directions for consistent illumination */}
-      <ambientLight intensity={0.8} />
-      <hemisphereLight args={[0xffffff, 0xffffff, 0.5]} />
+      {/* Lighting - brighter for clearer floor plan views */}
+      <ambientLight intensity={1.2} />
+      <hemisphereLight args={[0xffffff, 0xffffff, 0.7]} />
+      <pointLight position={[50, 50, 50]} intensity={0.5} />
+      <pointLight position={[-50, 50, 50]} intensity={0.5} />
+      <pointLight position={[50, 50, -50]} intensity={0.5} />
+      <pointLight position={[-50, 50, -50]} intensity={0.5} />
 
-      {/* Subtle fill lights from multiple angles for even coverage */}
-      <pointLight position={[50, 50, 50]} intensity={0.3} />
-      <pointLight position={[-50, 50, 50]} intensity={0.3} />
-      <pointLight position={[50, 50, -50]} intensity={0.3} />
-      <pointLight position={[-50, 50, -50]} intensity={0.3} />
-
-      {/* Invisible grid plane for click detection and pointer tracking - excluded from export */}
-      <mesh
-        ref={gridPlaneRef}
-        name="click-detection-plane"
-        userData={{ excludeFromExport: true }}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, 0]}
-        onClick={handleGridClick}
-        onPointerMove={handlePointerMove}
-        visible={false}
-      >
-        <planeGeometry args={[1000, 1000]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
-
-      {/* Grid - marked to exclude from export */}
-      <group name="grid-helper" userData={{ excludeFromExport: true }}>
-        <Grid
-          position={[0, -0.01, 0]}
-          args={[100, 100]}
-          cellSize={1}
-          cellThickness={0.5}
-          cellColor="#a0a0a0"
-          sectionSize={5}
-          sectionThickness={1}
-          sectionColor="#707070"
-          fadeDistance={100}
-          fadeStrength={1}
-          infiniteGrid
-        />
-      </group>
-
-      {/* Ghost building preview when in placement mode */}
-      {placementMode && ghostPosition && (
-        <group position={[ghostPosition.x, ghostPosition.y + (DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors) / 2, ghostPosition.z]}>
-          <mesh>
-            <boxGeometry args={[DEFAULT_BUILDING_SPEC.width, DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors, DEFAULT_BUILDING_SPEC.depth]} />
-            <meshStandardMaterial color={isSnapped ? "#22c55e" : "#f59e0b"} transparent opacity={0.5} />
-          </mesh>
-          {/* Gold effects around ghost building */}
-          <GoldEffects
-            position={[0, 0, 0]}
-            width={DEFAULT_BUILDING_SPEC.width}
-            height={DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors}
-            depth={DEFAULT_BUILDING_SPEC.depth}
-            intensity="high"
+      {isFloorPlanMode ? (
+        <>
+          {/* Render ghost floors first (renderOrder 0), then selected floor on top (renderOrder 1) */}
+          {Array.from({ length: selectedBuilding!.spec.numberOfFloors }, (_, i) =>
+            i !== floorPlanFloor ? (
+              <FloorPlanView
+                key={i}
+                floorIndex={i}
+                spec={selectedBuilding!.spec}
+                opacity={0.06}
+              />
+            ) : null
+          )}
+          <FloorPlanView
+            key={`selected-${floorPlanFloor}`}
+            floorIndex={floorPlanFloor!}
+            spec={selectedBuilding!.spec}
+            opacity={1}
           />
-        </group>
+
+          {/* Camera animator that transitions to floor height */}
+          <FloorCameraAnimator
+            floorIndex={floorPlanFloor!}
+            floorHeight={selectedBuilding!.spec.floorHeight}
+            controlsRef={floorPlanControlsRef}
+          />
+
+          {/* Full 3D orbit controls for floor plan — no angle restriction */}
+          <OrbitControls
+            ref={floorPlanControlsRef}
+            enableDamping
+            dampingFactor={0.05}
+            minDistance={5}
+            maxDistance={150}
+          />
+        </>
+      ) : (
+        <>
+          {/* Invisible grid plane for click detection */}
+          <mesh
+            ref={gridPlaneRef}
+            name="click-detection-plane"
+            userData={{ excludeFromExport: true }}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0, 0]}
+            onClick={handleGridClick}
+            onPointerMove={handlePointerMove}
+            visible={false}
+          >
+            <planeGeometry args={[1000, 1000]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+
+          {/* Grid */}
+          <group name="grid-helper" userData={{ excludeFromExport: true }}>
+            <Grid
+              position={[0, -0.01, 0]}
+              args={[100, 100]}
+              cellSize={1}
+              cellThickness={0.5}
+              cellColor="#a0a0a0"
+              sectionSize={5}
+              sectionThickness={1}
+              sectionColor="#707070"
+              fadeDistance={100}
+              fadeStrength={1}
+              infiniteGrid
+            />
+          </group>
+
+          {/* Ghost building preview */}
+          {placementMode && ghostPosition && (
+            <group position={[ghostPosition.x, ghostPosition.y + (DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors) / 2, ghostPosition.z]}>
+              <mesh>
+                <boxGeometry args={[DEFAULT_BUILDING_SPEC.width, DEFAULT_BUILDING_SPEC.floorHeight * DEFAULT_BUILDING_SPEC.numberOfFloors, DEFAULT_BUILDING_SPEC.depth]} />
+                <meshStandardMaterial color={isSnapped ? "#22c55e" : "#3b82f6"} transparent opacity={0.4} />
+              </mesh>
+            </group>
+          )}
+
+          {/* Buildings */}
+          {buildings.map((building) => (
+            <BuildingWrapper
+              key={building.id}
+              building={building}
+              isSelected={building.id === selectedBuildingId}
+              onSelect={() => selectBuilding(building.id)}
+            />
+          ))}
+
+          {/* Controls */}
+          <OrbitControls
+            enableDamping
+            dampingFactor={0.05}
+            minDistance={10}
+            maxDistance={200}
+          />
+        </>
       )}
-
-      {/* Burst effects when buildings are placed */}
-      {burstEffects.map(effect => (
-        <GoldBurst
-          key={effect.id}
-          position={effect.position}
-          onComplete={() => removeBurstEffect(effect.id)}
-        />
-      ))}
-
-      {/* Buildings */}
-      {buildings.map((building) => (
-        <BuildingWrapper
-          key={building.id}
-          building={building}
-          isSelected={building.id === selectedBuildingId}
-          onSelect={() => selectBuilding(building.id)}
-        />
-      ))}
-
-      {/* Controls */}
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.05}
-        minDistance={10}
-        maxDistance={200}
-      />
     </>
   );
 }
