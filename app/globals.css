@@ -949,7 +949,7 @@ body {
 
   .cp-theme-toggle {
     position: relative;
-    width: 116px;
+    width: 168px;
     height: 44px;
     border-radius: 9999px;
     border: 1px solid rgba(226, 232, 240, 0.95);
@@ -959,20 +959,23 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    cursor: pointer;
     overflow: hidden;
   }
 
   .cp-theme-label {
     position: relative;
     z-index: 2;
-    width: 48%;
+    width: 33.33%;
+    border: none;
+    background: transparent;
+    padding: 0;
     text-align: center;
     font-size: 0.72rem;
     font-weight: 700;
     color: #64748b;
     letter-spacing: 0.03em;
     transition: color 0.2s;
+    cursor: pointer;
   }
 
   .cp-theme-label--active {
@@ -984,7 +987,7 @@ body {
     z-index: 1;
     left: 5px;
     top: 4px;
-    width: 51px;
+    width: 50px;
     height: 34px;
     border-radius: 9999px;
     background: linear-gradient(135deg, #0ea5e9, #0284c7);
@@ -992,8 +995,12 @@ body {
     transition: transform 0.26s ease;
   }
 
+  .cp-theme-knob--middle {
+    transform: translateX(52px);
+  }
+
   .cp-theme-knob--right {
-    transform: translateX(54px);
+    transform: translateX(104px);
   }
 
   /* ═══════════════════════════════════════════
