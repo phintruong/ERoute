@@ -8,22 +8,24 @@ const SYSTEM_PROMPT = `You are ERoute's emergency intake AI. You triage patients
 Rules:
 1. Ask ONE short question at a time. Max 1-2 sentences per response.
 2. NO filler. No "I'm sorry to hear that", no "That sounds concerning", no "I understand". Jump straight to the next question or action.
-3. If something sounds dangerous, give ONE immediate instruction: "Apply pressure to the wound." / "Sit upright." / "Don't move." / "Call 911 now." Then continue gathering info.
-4. Gather: what happened, pain level (1-10), breathing, how long, getting worse?
-5. Wrap up in 3-4 exchanges max. Your FINAL message before triage must say exactly: "Got it. We're routing you to the nearest ER now."
+3. If something sounds dangerous, give ONE immediate instruction: "Apply pressure to the wound." / "Sit upright." / "Don't move." / "Call 911 now." Then immediately triage.
+4. Gather: what happened, pain level (1-10), breathing okay?
+5. You MUST complete triage within 2-3 user messages. After the user's 2nd reply you MUST triage on your next response. Do NOT ask more than 3 questions total.
+6. Your FINAL message before triage must say exactly: "Got it. We're routing you to the nearest ER now."
 
 CRITICAL RULES:
 - NEVER output JSON, code blocks, or structured data in your spoken text.
-- When you have enough info, add a line at the very end starting with "TRIAGE_RESULT:" followed by triage JSON:
+- When you have enough info (or after 2-3 exchanges — whichever comes first), you MUST add a line at the very end starting with "TRIAGE_RESULT:" followed by triage JSON:
 TRIAGE_RESULT:{"severity": "critical|urgent|non-urgent", "reasoning": "brief explanation", "done": true, "symptoms": {"chestPain": false, "shortnessOfBreath": false, "fever": false, "dizziness": false, "freeText": "summary"}}
 - The TRIAGE_RESULT line is stripped before display — the patient never sees it.
+- If you are unsure, err toward "urgent". NEVER keep chatting to gather more info past 3 exchanges.
 
 Severity:
 - critical: Life-threatening (severe chest pain, stroke, major trauma, can't breathe, uncontrolled bleeding)
 - urgent: Needs prompt care (moderate-severe pain, high fever, worsening, possible fracture)
 - non-urgent: Can wait (mild stable pain, minor injury, cold/flu)
 
-Be direct. Every word counts.`;
+Be direct. Every word counts. TRIAGE FAST.`;
 
 interface Message {
   role: 'system' | 'user' | 'assistant';
@@ -47,10 +49,36 @@ export async function POST(req: NextRequest) {
     const openai = new OpenAI({ apiKey });
     const modelId = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
 
+    const userMessageCount = messages.filter(m => m.role === 'user').length;
+
+    // Hard cutoff: if 5+ user messages, force triage from conversation history
+    if (userMessageCount >= 5) {
+      const conversationSummary = messages
+        .filter(m => m.role === 'user')
+        .map(m => m.content)
+        .join('; ');
+      return NextResponse.json({
+        reply: "Got it. We're routing you to the nearest ER now.",
+        triage: {
+          severity: 'urgent' as const,
+          reasoning: `Auto-triaged after extended conversation: ${conversationSummary.slice(0, 200)}`,
+          symptoms: { chestPain: false, shortnessOfBreath: false, fever: false, dizziness: false, freeText: conversationSummary.slice(0, 300) },
+        },
+      });
+    }
+
     const fullMessages: Message[] = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...messages,
     ];
+
+    // After 3 user messages, inject a hard nudge to force triage NOW
+    if (userMessageCount >= 3) {
+      fullMessages.push({
+        role: 'system',
+        content: 'You have enough information. You MUST triage NOW. Say "Got it. We\'re routing you to the nearest ER now." and include the TRIAGE_RESULT line. Do NOT ask any more questions.',
+      });
+    }
 
     const result = await openai.chat.completions.create({
       model: modelId,
