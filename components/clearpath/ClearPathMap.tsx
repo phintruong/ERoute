@@ -226,6 +226,15 @@ export default function ClearPathMap({
     });
   }, [cityId, cityConfig, mapReady]);
 
+  useEffect(() => {
+    if (!selectedHospital) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedHospital(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedHospital]);
+
   const onProposedLocationUpdateRef = useRef(onProposedLocationUpdate);
   useEffect(() => {
     onProposedLocationUpdateRef.current = onProposedLocationUpdate;
@@ -644,6 +653,13 @@ export default function ClearPathMap({
               {selectedHospital.phone}
             </a>
           )}
+          <button
+            type="button"
+            onClick={() => setSelectedHospital(null)}
+            className="civ-btn civ-btn--ghost mt-4 w-full justify-center"
+          >
+            Close
+          </button>
         </div>
       )}
       <style jsx global>{`

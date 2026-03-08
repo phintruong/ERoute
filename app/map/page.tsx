@@ -31,7 +31,7 @@ export default function MapPage() {
   const [isDark, setIsDark] = useState(false);
   const mapStyle = isDark
     ? 'mapbox://styles/mapbox/navigation-night-v1'
-    : 'mapbox://styles/mapbox/satellite-streets-v12';
+    : 'mapbox://styles/mapbox/navigation-day-v1';
 
   // Handle buildingId query param from editor export
   useEffect(() => {
