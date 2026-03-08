@@ -65,6 +65,17 @@ export interface BuildingSpecification {
 
   // Trees/Landscaping
   treeConfig?: TreeConfig;
+
+  // Hospital parameters
+  hospitalRooms?: number;
+  hospitalDoctors?: number;
+  hospitalNurses?: number;
+  hospitalOperatingRooms?: number;
+  hospitalBeds?: number;
+  hospitalEmergencyBays?: number;
+  hospitalAmbulances?: number;
+  hospitalTraumaRooms?: number;  // dedicated trauma/resuscitation rooms in ED
+  hospitalFloors?: number;       // tracked floors for hospital use
 }
 
 export interface BuildingExportData {
@@ -112,6 +123,14 @@ export const DEFAULT_BUILDING_SPEC: BuildingSpecification = {
   doorHeight: 2.4,
   doorPosition: 0.5,
   treeConfig: DEFAULT_TREE_CONFIG,
+  hospitalRooms: 0,
+  hospitalDoctors: 0,
+  hospitalNurses: 0,
+  hospitalOperatingRooms: 0,
+  hospitalBeds: 0,
+  hospitalEmergencyBays: 0,
+  hospitalAmbulances: 0,
+  hospitalTraumaRooms: 0,
 };
 
 // Multi-building support types

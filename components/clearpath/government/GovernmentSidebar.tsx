@@ -1,25 +1,42 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import CapacitySlider from './CapacitySlider';
-import ProposedHospitalPin from './ProposedHospitalPin';
+import Link from 'next/link';
 import SimulationResultPanel from './SimulationResultPanel';
 import BlueprintPicker from './BlueprintPicker';
-import type { Blueprint } from '@/lib/clearpath/blueprints';
+import type { Blueprint, ProposedBuilding } from '@/lib/clearpath/blueprints';
 
 interface GovernmentSidebarProps {
   cityId: string;
+  proposedLocations: ProposedBuilding[];
+  onProposedLocationsChange: (locations: ProposedBuilding[]) => void;
   onSimulationResult: (result: any) => void;
   onBlueprintChange?: (blueprint: Blueprint | null) => void;
+  customBlueprints?: Blueprint[];
+  importedBlueprint?: Blueprint | null;
 }
 
-export default function GovernmentSidebar({ cityId, onSimulationResult, onBlueprintChange }: GovernmentSidebarProps) {
-  const [proposedLocation, setProposedLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [capacity, setCapacity] = useState(100);
-  const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
+export default function GovernmentSidebar({
+  cityId,
+  proposedLocations,
+  onProposedLocationsChange,
+  onSimulationResult,
+  onBlueprintChange,
+  customBlueprints = [],
+  importedBlueprint,
+}: GovernmentSidebarProps) {
+  const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(importedBlueprint ?? null);
   const [simResult, setSimResult] = useState<any>(null);
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Auto-select imported blueprint when it arrives
+  useEffect(() => {
+    if (importedBlueprint && selectedBlueprint?.id !== importedBlueprint.id) {
+      setSelectedBlueprint(importedBlueprint);
+      onBlueprintChange?.(importedBlueprint);
+    }
+  }, [importedBlueprint]);
 
   useEffect(() => {
     fetch(`/api/clearpath/hospitals?city=${cityId}`)
@@ -29,8 +46,7 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
   }, [cityId]);
 
   useEffect(() => {
-    function handleMapClick(e: CustomEvent) {
-      setProposedLocation({ lat: e.detail.lat, lng: e.detail.lng });
+    function handleMapClick() {
       setSimResult(null);
     }
     window.addEventListener('clearpath:mapclick' as any, handleMapClick);
@@ -38,7 +54,7 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
   }, []);
 
   const runSimulation = useCallback(async () => {
-    if (!proposedLocation) return;
+    if (proposedLocations.length === 0) return;
     setLoading(true);
     try {
       const res = await fetch('/api/clearpath/simulate', {
@@ -46,9 +62,11 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           city: cityId,
-          proposedLat: proposedLocation.lat,
-          proposedLng: proposedLocation.lng,
-          proposedCapacity: capacity,
+          proposals: proposedLocations.map((b) => ({
+            lat: b.lat,
+            lng: b.lng,
+            capacity: b.blueprint.beds,
+          })),
         }),
       });
       const result = await res.json();
@@ -59,12 +77,34 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
     } finally {
       setLoading(false);
     }
-  }, [proposedLocation, capacity, cityId, onSimulationResult]);
+  }, [proposedLocations, cityId, onSimulationResult]);
+
+  const updateBuilding = useCallback(
+    (id: string, updates: Partial<{ lat: number; lng: number; rotation: number }>) => {
+      onProposedLocationsChange(
+        proposedLocations.map((b) => (b.id === id ? { ...b, ...updates } : b))
+      );
+      setSimResult(null);
+    },
+    [proposedLocations, onProposedLocationsChange]
+  );
+
+  const removeBuilding = useCallback(
+    (id: string) => {
+      onProposedLocationsChange(proposedLocations.filter((b) => b.id !== id));
+      setSimResult(null);
+    },
+    [proposedLocations, onProposedLocationsChange]
+  );
+
+  const clearAll = useCallback(() => {
+    onProposedLocationsChange([]);
+    setSimResult(null);
+  }, [onProposedLocationsChange]);
 
   const handleBlueprintSelect = useCallback((bp: Blueprint) => {
     const next = selectedBlueprint?.id === bp.id ? null : bp;
     setSelectedBlueprint(next);
-    if (next) setCapacity(next.beds);
     onBlueprintChange?.(next);
   }, [selectedBlueprint, onBlueprintChange]);
 
@@ -80,6 +120,14 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
       </div>
 
       <div className="space-y-4">
+        <Link
+          href="/editor"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 hover:border-sky-400 hover:text-sky-600 hover:bg-sky-50/50 transition-all text-sm font-semibold"
+        >
+          <span className="text-lg">🏗️</span>
+          Build in 3D Editor
+        </Link>
+
         <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl space-y-3">
           <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">1</span>
@@ -88,54 +136,131 @@ export default function GovernmentSidebar({ cityId, onSimulationResult, onBluepr
           <p className="text-[11px] text-slate-400">
             Choose a building blueprint to place on the map.
           </p>
-          <BlueprintPicker selected={selectedBlueprint} onSelect={handleBlueprintSelect} />
+          <BlueprintPicker selected={selectedBlueprint} onSelect={handleBlueprintSelect} customBlueprints={customBlueprints} />
         </div>
 
         <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl space-y-3">
           <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">2</span>
-            {selectedBlueprint ? 'Place Building on Map' : 'Place Proposed ER'}
+            {selectedBlueprint ? 'Place Buildings on Map' : 'Select a blueprint first'}
           </h3>
           <p className="text-[11px] text-slate-400">
-            Click anywhere on the map to drop {selectedBlueprint ? 'the building' : 'a proposed ER location'}.
+            {selectedBlueprint
+              ? 'Click highlighted zones to add buildings. You can place multiple.'
+              : 'Choose a blueprint above, then click on highlighted parcels.'}
           </p>
-          {proposedLocation && (
-            <ProposedHospitalPin lat={proposedLocation.lat} lng={proposedLocation.lng} />
+          {proposedLocations.length > 0 && (
+            <div className="space-y-2">
+              {proposedLocations.map((b) => {
+                const degrees = Math.round((b.rotation ?? 0) * (180 / Math.PI));
+                return (
+                  <div key={b.id} className="rounded-lg bg-white/80 border border-sky-100 overflow-hidden p-2 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium text-slate-700 truncate">
+                        {b.blueprint.name} ({b.blueprint.beds} beds)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeBuilding(b.id)}
+                        className="text-[10px] font-bold text-red-600 hover:text-red-700 px-2 py-0.5 rounded hover:bg-red-50 shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {/* Rotation */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                        Rotation: {degrees}°
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        step={5}
+                        value={degrees}
+                        onChange={(e) =>
+                          updateBuilding(b.id, { rotation: Number(e.target.value) * (Math.PI / 180) })
+                        }
+                        className="w-full h-1.5 mt-1 accent-sky-500"
+                      />
+                    </div>
+                    {/* Coordinates */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          Lat
+                        </label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={b.lat.toFixed(6)}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) updateBuilding(b.id, { lat: val });
+                          }}
+                          className="w-full mt-0.5 px-1.5 py-1 text-[11px] rounded border border-slate-200 focus:border-sky-400 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          Lng
+                        </label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={b.lng.toFixed(6)}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) updateBuilding(b.id, { lng: val });
+                          }}
+                          className="w-full mt-0.5 px-1.5 py-1 text-[11px] rounded border border-slate-200 focus:border-sky-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-[10px] font-bold text-slate-500 hover:text-slate-700 w-full py-1"
+              >
+                Clear all
+              </button>
+            </div>
           )}
         </div>
 
         <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl">
           <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider mb-3 flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">3</span>
-            Set Capacity
-          </h3>
-          <CapacitySlider value={capacity} onChange={setCapacity} />
-        </div>
-
-        <div className="p-4 bg-sky-50/60 border border-sky-200/70 rounded-2xl">
-          <h3 className="text-[11px] font-bold text-sky-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-[10px] font-black text-white">4</span>
             Run Simulation
           </h3>
           <button
             onClick={runSimulation}
-            disabled={!proposedLocation || loading}
-            className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-all ${proposedLocation && !loading
-                ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-md'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            disabled={proposedLocations.length === 0 || loading}
+            className={`w-full py-3 rounded-lg text-sm font-bold uppercase tracking-wide transition-all ${proposedLocations.length > 0 && !loading
+              ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-md'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
           >
             {loading ? 'Running Simulation...' : 'Run Voronoi Simulation'}
           </button>
-          {!proposedLocation && (
+          {proposedLocations.length === 0 && (
             <p className="text-[10px] text-slate-400 text-center mt-2">
-              Place a pin on the map first
+              Place at least one building on the map first
             </p>
           )}
         </div>
 
         {simResult && (
-          <SimulationResultPanel result={simResult} hospitals={hospitals} />
+          <SimulationResultPanel
+            result={simResult}
+            hospitals={hospitals}
+            proposedLabels={Object.fromEntries(
+              proposedLocations.map((b, i) => [`proposed-${i}`, `${b.blueprint.name} (new)`])
+            )}
+          />
         )}
       </div>
     </div>

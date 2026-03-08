@@ -7,13 +7,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface GLBModelLayerProps {
   map: mapboxgl.Map | null;
+  id: string;
   glbPath: string;
   lngLat: { lng: number; lat: number };
+  rotation?: number;
 }
 
-const LAYER_ID = 'glb-blueprint-model';
-
-export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerProps) {
+export default function GLBModelLayer({ map, id, glbPath, lngLat, rotation = 0 }: GLBModelLayerProps) {
+  const layerId = `glb-model-${id}`;
   const addedRef = useRef(false);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const modelRef = useRef<THREE.Group | null>(null);
@@ -22,6 +23,7 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
     translateY: 0,
     translateZ: 0,
     scale: 1e-6,
+    rotation: 0,
   });
 
   // Add the custom layer once
@@ -46,8 +48,10 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
 
     let renderer: THREE.WebGLRenderer;
 
+    const lid = layerId;
+
     const customLayer: mapboxgl.CustomLayerInterface = {
-      id: LAYER_ID,
+      id: lid,
       type: 'custom',
       renderingMode: '3d',
 
@@ -62,16 +66,23 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
 
       render(_gl: WebGLRenderingContext, matrix: number[]) {
         const t = transformRef.current;
+
         const rotationX = new THREE.Matrix4().makeRotationAxis(
           new THREE.Vector3(1, 0, 0),
           Math.PI / 2
+        );
+
+        const rotationY = new THREE.Matrix4().makeRotationAxis(
+          new THREE.Vector3(0, 1, 0),
+          t.rotation
         );
 
         const m = new THREE.Matrix4().fromArray(matrix);
         const l = new THREE.Matrix4()
           .makeTranslation(t.translateX, t.translateY, t.translateZ)
           .scale(new THREE.Vector3(t.scale, -t.scale, t.scale))
-          .multiply(rotationX);
+          .multiply(rotationX)
+          .multiply(rotationY);
 
         camera.projectionMatrix = m.multiply(l);
         renderer.resetState();
@@ -83,7 +94,7 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
     function add() {
       if (!map) return;
       try {
-        if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
+        if (map.getLayer(lid)) map.removeLayer(lid);
       } catch { /* ignore */ }
       map.addLayer(customLayer);
       addedRef.current = true;
@@ -98,13 +109,13 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
     return () => {
       if (!map) return;
       try {
-        if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
+        if (map.getLayer(lid)) map.removeLayer(lid);
       } catch { /* ignore */ }
       addedRef.current = false;
       sceneRef.current = null;
       modelRef.current = null;
     };
-  }, [map]);
+  }, [map, layerId]);
 
   // Load/swap the GLB model when glbPath changes
   useEffect(() => {
@@ -138,6 +149,7 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
       0
     );
     transformRef.current = {
+      ...transformRef.current,
       translateX: merc.x,
       translateY: merc.y,
       translateZ: merc.z ?? 0,
@@ -145,6 +157,12 @@ export default function GLBModelLayer({ map, glbPath, lngLat }: GLBModelLayerPro
     };
     map.triggerRepaint();
   }, [lngLat, map]);
+
+  // Update rotation
+  useEffect(() => {
+    transformRef.current.rotation = rotation;
+    map?.triggerRepaint();
+  }, [rotation, map]);
 
   return null;
 }

@@ -8,6 +8,8 @@ import { InputPanel } from '@/components/editor/InputPanel/InputPanel';
 import { Scene } from '@/components/editor/Viewport/Scene';
 import { ExportBar } from '@/components/editor/Export/ExportBar';
 import { VoiceDesign } from '@/components/editor/InputPanel/VoiceDesign';
+import { RoomListSidebar } from '@/components/editor/FloorPlan/RoomListSidebar';
+import { FloorPlanBackButton } from '@/components/editor/FloorPlan/FloorPlanBackButton';
 
 export default function BuildingEditorApp() {
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -39,8 +41,10 @@ export default function BuildingEditorApp() {
           </div>
 
           {/* 3D Viewport - Right Side */}
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <Scene sceneRef={sceneRef} />
+            <RoomListSidebar />
+            <FloorPlanBackButton />
           </div>
         </div>
 
